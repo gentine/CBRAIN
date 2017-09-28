@@ -146,6 +146,19 @@ class DataLoader:
         
         return y_data
 
+    # =========================================================================
+    # Making dummy data here for network test; linear transform of OMEGA,
+    # +/- a random perturbation; if the network can predict this
+    # relationship, then at least the model works; if not, there is a bug
+    # =========================================================================
+    def makeDummyData(self, x_data):
+        y_data = x_data * 10000
+        rows,cols = y_data.shape
+        for i in range(rows):
+            for j in range(cols):
+                y_data[i,j] = y_data[i,j] + random.uniform(-1000,1000)
+        return y_data
+
     def accessData(self, s, l, fileReader):
         inputs = []
         for k in self.inputNameList:#fileReader.keys():
@@ -172,7 +185,8 @@ class DataLoader:
             inX = np.stack(inputs, axis=-1) #[b,z,1,c]
         else: # make a soup of numbers
             inX = np.concatenate(inputs, axis=-1) #[b,cc]
-        y_data = self.readDatasetY(s, l, fileReader, self.varnameList, self.config.convo)
+        #y_data = self.readDatasetY(s, l, fileReader, self.varnameList, self.config.convo) # real data routine
+        y_data = self.makeDummyData(inX) # dummy data routine
 
         if False:
             # remove any rows with NaNs
