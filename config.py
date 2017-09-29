@@ -17,18 +17,18 @@ def add_argument_group(name):
 net_arg = add_argument_group('Network')
 #net_arg.add_argument('--input_scale_size', type=int, default=64, help='input image will be resized with the given value as width and height')
 #net_arg.add_argument('--conv_hidden_num', type=int, default=128, choices=[64, 128,16,32],help='n in the paper')
-net_arg.add_argument('--hidden',  type=str, default='21', help='comma separated list of hidden layer units')
+net_arg.add_argument('--hidden',  type=str, default='13', help='comma separated list of hidden layer units')
 
 # Data
 data_arg = add_argument_group('Data')
 data_arg.add_argument('--dataset', type=str, default='OMEGA_LIN_TRANS', help='names of predicted variable(s)')
-data_arg.add_argument('--batch_size', type=int, default=1024)
+data_arg.add_argument('--batch_size', type=int, default=50)
 data_arg.add_argument('--frac_train', type=float, default=0.8)
 data_arg.add_argument('--local', type=str2bool, default=False)
-data_arg.add_argument('--epoch', type=int, default=12)
-data_arg.add_argument('--randomize', type=str2bool, default=True)
+data_arg.add_argument('--epoch', type=int, default=50)
+data_arg.add_argument('--randomize', type=str2bool, default=False)
 data_arg.add_argument('--normalize', type=str2bool, default=True)
-data_arg.add_argument('--convo', type=str2bool, default=False)
+data_arg.add_argument('--convo', type=str2bool, default=True)
 data_arg.add_argument('--input_names', type=str, default='OMEGA', help='names of input variables')
 
 

@@ -151,12 +151,18 @@ class DataLoader:
     # +/- a random perturbation; if the network can predict this
     # relationship, then at least the model works; if not, there is a bug
     # =========================================================================
-    def makeDummyData(self, x_data):
-        y_data = x_data * 10000
-        rows,cols = y_data.shape
-        for i in range(rows):
-            for j in range(cols):
-                y_data[i,j] = y_data[i,j] + random.uniform(-1000,1000)
+    def makeDummyData(self, x_data, is_convo):
+        y_data = x_data * 1e4
+        if is_convo:
+            rows,cols,tmp1,tmp2 = y_data.shape
+            for i in range(rows):
+                for j in range(cols):
+                    y_data[i,j,0,0] = y_data[i,j,0,0] + random.uniform(-1e3,1e3)
+        else:
+            rows,cols = y_data.shape
+            for i in range(rows):
+                for j in range(cols):
+                    y_data[i,j] = y_data[i,j] + random.uniform(-1e3,1e3)
         return y_data
 
     def accessData(self, s, l, fileReader):
@@ -186,7 +192,7 @@ class DataLoader:
         else: # make a soup of numbers
             inX = np.concatenate(inputs, axis=-1) #[b,cc]
         #y_data = self.readDatasetY(s, l, fileReader, self.varnameList, self.config.convo) # real data routine
-        y_data = self.makeDummyData(inX) # dummy data routine
+        y_data = self.makeDummyData(inX, self.config.convo) # dummy data routine
 
         if False:
             # remove any rows with NaNs
