@@ -143,11 +143,13 @@ class Trainer(object):
                         format(ep, loss, logloss, R2, self.data_loader.size_op.eval(session=self.sess), self.lr.eval(session=self.sess)))
 
                     for op in tf.all_variables():
-                        print(op) 
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
                             filename = 'saveNet/'+op.name
-                            os.makedirs(os.path.dirname(filename), exist_ok=True)
+                            try:
+                                os.makedirs(os.path.dirname(filename))
+                            except:
+                                pass
                             np.save(filename, npar)
 
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
