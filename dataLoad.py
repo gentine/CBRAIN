@@ -1,18 +1,19 @@
 import numpy as np
 import shutil, time, math, itertools, os
-import h5py
-#import netCDF4 as nc 
-#from netCDF4 import Dataset
+import h5netcdf as h5py
+import netCDF4 as nc
 from tqdm import tqdm
 import tensorflow as tf
 import threading
 import random
 from colorama import Fore, Back, Style
+from config import get_config
 import sys
 from folderDefs import *
+import glob
 
 class DataLoader:
-    def __init__(self, folderPath, config):
+    def __init__(self, folderPath, config, rawFileBase=''):
         self.config = config
         self.batchSize = config.batch_size
         self.nSampleFetching = 1024
@@ -20,9 +21,37 @@ class DataLoader:
         self.fileReader = []
         self.lock = threading.Lock()
         self.inputNameList = self.config.input_names.split(',')
+        self.rawFileBase = rawFileBase
         self.reload()
 
-    def reload(self, finishedEpoch = 0):
+    def reload(self):
+        if self.rawFileBase:
+            shuffle_data = False  # shuffle the addresses before saving
+            cat_dog_train_path = trainingDataDirRaw+'*.nc'
+            # read addresses and labels from the 'train' folder
+            self.rawFiles = {}
+            self.rawDates = []
+            for fn in  glob.glob(cat_dog_train_path):
+                date = fn.split('.')[-2]
+                self.rawDates += [date]
+                self.rawFiles[date] = fn
+            print(self.rawFiles)
+            print('last raw file:', fn)
+            with nc.Dataset(fn, mode='r') as aqua_rg:
+                n_tim = aqua_rg.dimensions['time'].size
+                n_lev = aqua_rg.dimensions['lev'].size
+                n_lat = aqua_rg.dimensions['lat'].size
+                n_lon = aqua_rg.dimensions['lon'].size
+                print(aqua_rg)
+                for k in aqua_rg.variables.keys():
+                    print(fn+': ', k, aqua_rg[k].shape)
+                print('n_tim =', n_tim)
+                print('n_lev =', n_lev)
+                print('n_lat =', n_lat)
+                print('n_lon =', n_lon)
+                print(aqua_rg.variables['time'][:])
+
+
         # need to retrieve mean and standard deviation of the full dataset first
         print("Reading Netcdfs mean and std for Normalization")
         self.mean = {}
@@ -43,14 +72,6 @@ class DataLoader:
                     self.std[k] = np.array(fh[k])[None]
                 print('nc_std_file: ', k, self.std[k].shape)#, self.std[k])
  
-        #with h5py.File(nc_max_file, mode='r') as fh: # normalize outputs to be between -1 and 1
-        #    for k in fh.keys():
-        #        try:
-        #            self.max[k] = fh[k][None,:]
-        #        except:
-        #            self.max[k] = np.array(fh[k])[None]
-        #        print('nc_max_file: ', k, self.max[k].shape)#, self.max[k])
-        
         print("End Reading Netcdfs for Normalization")
         try:
             for i in range(len(self.fileReader)):
@@ -270,4 +291,3 @@ class DataLoader:
             print("Initializing queue, current size = %i/%i" % (num_samples_in_queue, self.capacityTrain))
             time.sleep(2)
         return threads
-
