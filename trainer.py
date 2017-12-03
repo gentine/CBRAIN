@@ -142,8 +142,8 @@ class Trainer(object):
                             filename = self.model_dir+'saveNet/'+op.name
                             try:
                                 os.makedirs(os.path.dirname(filename))
-			    except:
-				pass
+                            except:
+                                pass
                             np.save(filename, npar)
 
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
