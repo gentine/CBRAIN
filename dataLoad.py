@@ -15,7 +15,6 @@ import glob
 class DataLoader:
     def __init__(self, folderPath, config, rawFileBase=''):
         self.config = config
-        self.batchSize = config.batch_size
         self.nSampleFetching = 1024
         self.varnameList = config.dataset.split(',')
         self.fileReader = []
@@ -25,79 +24,58 @@ class DataLoader:
         self.reload()
 
     def reload(self):
-        if self.rawFileBase:
-            shuffle_data = False  # shuffle the addresses before saving
-            cat_dog_train_path = trainingDataDirRaw+'*.nc'
-            # read addresses and labels from the 'train' folder
-            self.rawFiles = {}
-            self.rawDates = []
-            for fn in  glob.glob(cat_dog_train_path):
-                date = fn.split('.')[-2]
-                self.rawDates += [date]
-                self.rawFiles[date] = fn
-            print(self.rawFiles)
-            print('last raw file:', fn)
-            with nc.Dataset(fn, mode='r') as aqua_rg:
-                n_tim = aqua_rg.dimensions['time'].size
-                n_lev = aqua_rg.dimensions['lev'].size
-                n_lat = aqua_rg.dimensions['lat'].size
-                n_lon = aqua_rg.dimensions['lon'].size
-                print(aqua_rg)
-                for k in aqua_rg.variables.keys():
-                    print(fn+': ', k, aqua_rg[k].shape)
-                print('n_tim =', n_tim)
-                print('n_lev =', n_lev)
-                print('n_lat =', n_lat)
-                print('n_lon =', n_lon)
-                print(aqua_rg.variables['time'][:])
+        shuffle_data = False  # shuffle the addresses before saving
+        cat_dog_train_path = trainingDataDirRaw+'*.nc'
+        # read addresses and labels from the 'train' folder
+        self.rawFiles = {}
+        self.rawDates = []
+        for fn in  glob.glob(cat_dog_train_path):
+            date = fn.split('.')[-2]
+            self.rawDates += [date]
+            self.rawFiles[date] = fn
+        print(self.rawFiles)
+        print('last raw file:', fn)
+        with nc.Dataset(fn, mode='r') as aqua_rg:
+            self.n_tim = aqua_rg.dimensions['time'].size
+            self.n_lev = aqua_rg.dimensions['lev'].size
+            self.n_lat = aqua_rg.dimensions['lat'].size
+            self.n_lon = aqua_rg.dimensions['lon'].size
+            print(aqua_rg)
+            for k in aqua_rg.variables.keys():
+                print(fn+': ', k, aqua_rg[k].shape)
+            print('n_tim =', self.n_tim)
+            print('n_lev =', self.n_lev)
+            print('n_lat =', self.n_lat)
+            print('n_lon =', self.n_lon)
+            print(aqua_rg.variables['lev'][:])
+            sampX, sampY = self.accessData(0, self.nSampleFetching, aqua_rg)
 
-
-        # need to retrieve mean and standard deviation of the full dataset first
-        print("Reading Netcdfs mean and std for Normalization")
-        self.mean = {}
-        self.std = {}
-        self.max = {}
-        with h5py.File(nc_mean_file, mode='r') as fh:
-            for k in fh.keys():
-                try:
-                    self.mean[k] = fh[k][None,:]
-                except:
-                    self.mean[k] = np.array(fh[k])[None]
-                print('nc_mean_file: ', k, self.mean[k].shape)#, self.mean[k])
-        with h5py.File(nc_std_file, mode='r') as fh:
-            for k in fh.keys():
-                try:
-                    self.std[k] = fh[k][None,:]
-                except:
-                    self.std[k] = np.array(fh[k])[None]
-                print('nc_std_file: ', k, self.std[k].shape)#, self.std[k])
- 
-        print("End Reading Netcdfs for Normalization")
         try:
             for i in range(len(self.fileReader)):
                 self.fileReader[i].close()
         except:
             pass
-        print("batchSize = ", self.batchSize)
+        print("batchSize = ", self.config.batch_size)
 
-        with h5py.File(nc_file, mode='r') as fh:
-            for k in fh.keys():
-                print('nc_file: ', k, fh[k].shape)
-            self.Nsamples = fh[k].shape[0]
-            print('Nsamples =', self.Nsamples)
-            self.Nlevels      = self.mean['QAP'].shape[1]
-            print('Nlevels = ', self.Nlevels)
-            sampX, sampY = self.accessData(0, self.nSampleFetching, fh)
-            self.n_input = sampX.shape[1] # number of inputs 
-            self.n_output = sampY.shape[1] # number of outputs 
-            print('sampX = ', sampX.shape)
-            print('sampY = ', sampY.shape)
-            print('n_input = ', self.n_input)
-            print('n_output = ', self.n_output)
-
+#        with h5py.File(nc_file, mode='r') as fh:
+#            for k in fh.keys():
+#                print('nc_file: ', k, fh[k].shape)
+#            self.Nsamples = fh[k].shape[0]
+#            print('Nsamples =', self.Nsamples)
+#            self.Nlevels      = self.mean['QAP'].shape[1]
+#            print('Nlevels = ', self.Nlevels)
+#             sampX, sampY = self.accessData(0, self.nSampleFetching, fh)
+#            self.n_input = sampX.shape[1] # number of inputs 
+#            self.n_output = sampY.shape[1] # number of outputs 
+#             print('sampX = ', sampX.shape)
+#             print('sampY = ', sampY.shape)
+#            print('n_input = ', self.n_input)
+#            print('n_output = ', self.n_output)
+#
+        self.Nsamples = self.n_tim * len(self.rawDates)
         self.NumBatch = self.Nsamples // self.config.batch_size
-        self.NumBatchTrain = int(self.Nsamples * self.config.frac_train) // self.batchSize
-        self.indexValidation = self.NumBatchTrain * self.batchSize
+        self.NumBatchTrain = int(self.Nsamples * self.config.frac_train) // self.config.batch_size
+        self.indexValidation = self.NumBatchTrain * self.config.batch_size
         self.NumBatchValid = int(self.Nsamples * (1.0 - self.config.frac_train)) // self.config.batch_size
         print('NumBatch=', self.NumBatch)
         print('NumBatchTrain=', self.NumBatchTrain)
@@ -141,80 +119,48 @@ class DataLoader:
             return arr*2.5e6
         return arr
 
-    def readDatasetY(self, s, l, fileReader, varnameList, convo):
+    def readDatasetY(self, s, l, fileReader):
         data = []
-        if convo:
-            for k in varnameList:
-                try:
-                    arr = fileReader[k][:,s:s+l].T[:,:,None,None]# [b,h,1,c=1]
-                except:
-                    arr = np.array(fileReader[k][s:s+l])[None,:].T[:,:,None,None]
-                if self.config.convert_units:
-                    arr = self.convertUnits(k, arr)
-                data += [arr]
-            y_data = np.concatenate(data, axis=3) #[b,z,1,c]
+        for k in self.varnameList:
+            try:
+                arr = fileReader[k][s:s+l,:,:,:].transpose([0,2,3,1])
+            except:
+                arr = fileReader[k][s:s+l][:,None,:,:].transpose([0,2,3,1])
+            if self.config.convert_units:
+                arr = self.convertUnits(k, arr)
+            data += [arr]
+        if self.config.convo:
+            y_data = np.stack(data, axis=-1)
         else:
-            for k in varnameList:
-                try:
-                    arr = fileReader[k][:,s:s+l].T
-                except:
-                    arr = np.array(fileReader[k][s:s+l])[None,:].T
-                if self.config.convert_units:
-                    arr = self.convertUnits(k, arr)
-                data += [arr]
             y_data = np.concatenate(data, axis=-1) #[b,cc]
         
         return y_data
 
     def accessData(self, s, l, fileReader):
         inputs = []
-        for k in self.inputNameList:#fileReader.keys():
-            #print('nc_file: ', k, fileReader[k].shape)
+        for k in self.inputNameList:
             try:
-                arr = fileReader[k][:,s:s+l].T
+                arr = fileReader[k][s:s+l,:,:,:].transpose([0,2,3,1])
             except:
-                arr = np.array(fileReader[k][s:s+l])[None,:].T
-            # normalize data
-            if self.config.normalize:
-                arr -= self.mean[k]
-                arr /= self.std[k]
-            #if s == 0:
-            #    print('nc_file: ', k, arr.shape)
+                arr = fileReader[k][s:s+l][:,None,:,:].transpose([0,2,3,1])
+            print(k, arr.shape)
 
             if self.config.convo:
                 if arr.shape[-1] == 1:
-                    arr = np.tile(arr, (1,self.Nlevels))
-                arr = arr[:,:,None] #[b,z,1]
-                #print('nc_file: ', k, arr.shape)
+                    arr = np.tile(arr, (1,1,1,self.n_lev))
+                #arr = arr[:,:,:,:,None] #[t,lat,lon,lev,1]
+                print(k, arr.shape)
             inputs += [arr]
         # input output data
         if self.config.convo:
-            inX = np.stack(inputs, axis=-1) #[b,z,1,c]
+            inX = np.stack(inputs, axis=-1) #[b,lat,lon,lev,chan]
         else: # make a soup of numbers
-            inX = np.concatenate(inputs, axis=-1) #[b,cc]
-        y_data = self.readDatasetY(s, l, fileReader, self.varnameList, self.config.convo)
+            inX = np.concatenate(inputs, axis=-1) #[b,lon,lat,cc]
+        y_data = self.readDatasetY(s, l, fileReader)
 
-        if False:
-            # remove any rows with NaNs
-            tmp = inX
-            print('tmp.shape', tmp.shape)
-            inX = np.empty((0,tmp.shape[1]), float)
-            print('inX.shape', inX.shape)
-            y_data_good = np.empty((0,1), float)
-            print('y_data_good.shape', y_data_good.shape)
-            i = 0
-            for row in tmp:
-                test = np.isnan(row).any()
-                if not test:
-                    inX = np.vstack([inX, row])
-                    y_data_good = np.vstack([y_data_good, y_data[i]])
-                i += 1
-            y_data = y_data_good
-
-        #if s == 0:
-        #    print('inX.shape', inX.shape)
-        #    print('y_data.shape', y_data.shape)
-
+        # flattens t,lon,lat
+        inX = inX.reshape((-1,)+inX.shape[-2:])
+        y_data = y_data.reshape((-1,)+y_data.shape[-2:])
         return inX, y_data
 
     def sampleTrain(self, ithFileReader):
@@ -246,7 +192,7 @@ class DataLoader:
             self.dataX = tf.placeholder(dtype=tf.float32, shape=[None]+self.Xshape)
             self.dataY = tf.placeholder(dtype=tf.float32, shape=[None]+self.Yshape)
 
-            self.capacityTrain = max(self.nSampleFetching * 32, self.batchSize * 8) if self.config.is_train else self.batchSize
+            self.capacityTrain = max(self.nSampleFetching * 32, self.config.batch_size * 8) if self.config.is_train else self.config.batch_size
             if self.config.randomize:
                 self.queue = tf.RandomShuffleQueue(shapes=[self.Xshape, self.Yshape],
                                                dtypes=[tf.float32, tf.float32],
@@ -264,7 +210,7 @@ class DataLoader:
     def get_inputs(self):
         with tf.name_scope('dequeue'):
             train0Valid1 = tf.placeholder_with_default(1, [], name='train0Valid1')
-            b_X, b_Y = self.queue.dequeue_many(self.batchSize)
+            b_X, b_Y = self.queue.dequeue_many(self.config.batch_size)
             print("b_X",b_X.get_shape(), "b_Y",b_Y.get_shape())
             return b_X, b_Y
 
