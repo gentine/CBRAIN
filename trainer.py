@@ -66,19 +66,22 @@ class Trainer(object):
 
 
         self.visuarrs = []
+        x0 = self.x[:,0]
+        self.frameWorld = tf.reshape(tf.reduce_mean(x0, axis=1), [self.data_loader.n_lat, -1])
         try:
-            Xhb1c = tf.transpose(self.x[:,:,::-1,0], [2,0,1])
-            Yhb1c = tf.transpose(self.y[:,:,::-1,0], [2,0,1])
-            Phb1c = tf.transpose(self.pred[:,:,::-1,0], [2,0,1])
-            Lhb1c = tf.transpose(self.losses[:,:,::-1,0], [2,0,1])
+            maxWidth = self.data_loader.n_lon
+            Xhb1c = tf.transpose(self.x[:maxWidth,:,::-1,0], [2,0,1])
+            Yhb1c = tf.transpose(self.y[:maxWidth,:,::-1,0], [2,0,1])
+            Phb1c = tf.transpose(self.pred[:maxWidth,:,::-1,0], [2,0,1])
+            Lhb1c = tf.transpose(self.losses[:maxWidth,:,::-1,0], [2,0,1])
             self.visuarrs += tf.unstack(Xhb1c, axis=-1)
             self.visuarrs += tf.unstack(Yhb1c, axis=-1)
             self.visuarrs += tf.unstack(Phb1c, axis=-1)
             self.visuarrs += tf.unstack(Lhb1c, axis=-1)
+            self.visuarrs += [self.frameWorld]
+            print("self.frameWorld", self.frameWorld.shape)
         except:
             pass
-        self.frameWorld = tf.reshape(tf.reduce_mean(self.x, axis=2)[:,0], [self.data_loader.n_lat, -1])
-        print("self.frameWorld", self.frameWorld.shape)
 
         self.valStr = '' if config.is_train else '_val'
         self.saver = tf.train.Saver()# if self.is_train else None
@@ -119,7 +122,8 @@ class Trainer(object):
             for step in trainBar:
                 totStep += 1
                 fetch_dict = {"optim": self.optim,
-                        "visuarrs": self.visuarrs}
+                        "visuarrs": self.visuarrs,
+                        "frameWorld": self.frameWorld}
                 if step % self.log_step == 0:
                     fetch_dict.update({
                         "summary": self.summary_op,
@@ -149,10 +153,11 @@ class Trainer(object):
                             np.save(filename, npar)
 
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
+                frameWorld = result['frameWorld']#self.sess.run(self.visuarrs)
                 try:
-                    visualizer.update(arrays=visuarrs, frame=self.frameWorld)#, frame=np.concatenate(visuarrs, axis=1))
+                    visualizer.update(arrays=visuarrs, frame=frameWorld)
                 except:
-                    pass
+                    pass#visualizer.update(arrays=visuarrs, frame=np.concatenate(visuarrs, axis=1))
                 #for i in range(63+0*step//1000): self.sess.run(self.x)
                 #if step % 100 == 0:
                 #    self.sess.run(self.visuarrs)

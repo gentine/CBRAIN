@@ -147,7 +147,7 @@ class DataLoader:
         return inX
 
     def prepareData(self, fileReader, iTim):
-        samp = self.accessTimeData(fileReader, self.varAllList, 0)
+        samp = self.accessTimeData(fileReader, self.varAllList, iTim)
         return np.split(samp, [self.varNameSplit])
 
     def sampleTrain(self, ithFileReader):
