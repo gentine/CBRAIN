@@ -94,6 +94,20 @@ class DataLoader:
         print('Xshape', self.Xshape)
         print('Yshape', self.Yshape)
 
+        ## this deals with tf records and using them by date for training/validation
+        if not self.rawFileBase:
+            tfRecordsFolderName = '/'.join(self.recordFileName(trainingDataDirTFRecords+date+'/t{0:02d}').split('/')[:-1])
+            folders = glob.glob(trainingDataDirTFRecords+'*')
+            foldersSplit = int(len(folders) * self.config.frac_train + 0.5)
+            print(folders)
+            folders = folders[:foldersSplit] if self.config.is_train else folders[foldersSplit:]
+            print(Fore.RED, 'days', [fn.split('/')[-1] for fn in folders], Style.RESET_ALL)
+            self.tfRecordsFiles = []
+            for fn in folders:
+                self.tfRecordsFiles += glob.glob(fn+"/*.tfrecords")
+            self.tfRecordsFiles = sorted(self.tfRecordsFiles)
+            print("tfRecordsFiles", len(self.tfRecordsFiles))
+
     def __enter__(self):
         return self
     def __exit__(self, exc_type, exc_value, traceback):
@@ -161,6 +175,7 @@ class DataLoader:
             yield sampX, sampY
 
     def prepareQueue(self):
+        return
         with tf.name_scope('prepareQueue'):
             self.dataX = tf.placeholder(dtype=tf.float32, shape=[None]+self.Xshape)
             self.dataY = tf.placeholder(dtype=tf.float32, shape=[None]+self.Yshape)
@@ -181,6 +196,7 @@ class DataLoader:
             self.size_op = self.queue.size()
 
     def get_inputs(self):
+        return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
         with tf.name_scope('dequeue'):
             train0Valid1 = tf.placeholder_with_default(1, [], name='train0Valid1')
             b_X, b_Y = self.queue.dequeue_many(self.config.batch_size)
@@ -219,7 +235,7 @@ class DataLoader:
             return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
         def _floats_feature(value):
             return tf.train.Feature(float_list=tf.train.FloatList(value=value))
-        filenameBase = self.recordFileName(trainingDataDirTFRecords+date+'/s{0:02d}')
+        filenameBase = self.recordFileName(trainingDataDirTFRecords+date+'/t{0:02d}')
         folderName = '/'.join(filenameBase.split('/')[:-1])
         #print(filenameBase)
         #print(folderName)
@@ -269,6 +285,60 @@ class DataLoader:
             date = self.rawDates[k]
             self.makeTfRecordsDate(date)
 
+    def read_and_decode(self, filename_queue):
+        reader = tf.TFRecordReader()
+        _, serialized_example = reader.read(filename_queue)
+        features = tf.parse_single_example(serialized_example,
+            features={
+            'X': tf.FixedLenFeature([], tf.string),
+            'Y': tf.FixedLenFeature([], tf.string)
+        })
+        X = tf.decode_raw(features['X'], tf.float32)
+        Y = tf.decode_raw(features['Y'], tf.float32)
+        #print('read_and_decode X', X)
+        X.set_shape(np.prod(self.Xshape))
+        Y.set_shape(np.prod(self.Yshape))
+        #print('read_and_decode X', X)
+        X = tf.reshape(X, self.Xshape)
+        Y = tf.reshape(Y, self.Yshape)
+        print('read_and_decode X', X)
+        print('read_and_decode Y', Y)
+        return X, Y
+
+    def get_record_inputs(self, train, batch_size, num_epochs):
+        """Reads input data num_epochs times.
+        Args:
+        train: Selects between the training (True) and validation (False) data.
+        batch_size: Number of examples per returned batch.
+        num_epochs: Number of times to read the input data, or 0/None to
+           train forever.
+        Note that an tf.train.QueueRunner is added to the graph, which
+        must be run using e.g. tf.train.start_queue_runners().
+        """
+        if not num_epochs: num_epochs = None
+        with tf.name_scope('dequeue'):
+            filename_queue = tf.train.string_input_producer(self.tfRecordsFiles, num_epochs=num_epochs, shuffle=self.config.randomize)
+            print('filename_queue', filename_queue)
+            X, Y = self.read_and_decode(filename_queue)
+            X = tf.transpose(tf.reshape(X, self.Xshape[:2]+[-1]), [2,0,1])
+            Y = tf.transpose(tf.reshape(Y, self.Yshape[:2]+[-1]), [2,0,1])
+            X = tf.expand_dims(X, -1)
+            Y = tf.expand_dims(Y, -1)
+            # Shuffle the examples and collect them into batch_size batches.
+            # (Internally uses a RandomShuffleQueue.)
+            # We run this in two threads to avoid being a bottleneck.
+            self.capacityTrain = batch_size * 128
+            if self.config.randomize:
+                b_X, b_Y = tf.train.shuffle_batch([X, Y], batch_size=batch_size, num_threads=2,
+                                                    enqueue_many=True,
+                                                    capacity=self.capacityTrain,
+                                                    min_after_dequeue=self.capacityTrain // 2)
+            else:
+                b_X, b_Y = tf.train.batch([X, Y], batch_size=batch_size, num_threads=2,
+                                                    enqueue_many=True,
+                                            capacity=self.capacityTrain)
+            print('self.capacityTrain', self.capacityTrain)
+        return b_X, b_Y
 
 if __name__ == "__main__":
     config, unparsed = get_config()

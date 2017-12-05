@@ -67,16 +67,18 @@ class Trainer(object):
 
         self.visuarrs = []
         try:
-            Xhb1c = tf.transpose(self.x[:,::-1,0,:], [1,0,2])
-            Yhb1c = tf.transpose(self.y[:,::-1,0,:], [1,0,2])
-            Phb1c = tf.transpose(self.pred[:,::-1,0,:], [1,0,2])
-            Lhb1c = tf.transpose(self.losses[:,::-1,0,:], [1,0,2])
+            Xhb1c = tf.transpose(self.x[:,:,::-1,0], [2,0,1])
+            Yhb1c = tf.transpose(self.y[:,:,::-1,0], [2,0,1])
+            Phb1c = tf.transpose(self.pred[:,:,::-1,0], [2,0,1])
+            Lhb1c = tf.transpose(self.losses[:,:,::-1,0], [2,0,1])
             self.visuarrs += tf.unstack(Xhb1c, axis=-1)
             self.visuarrs += tf.unstack(Yhb1c, axis=-1)
             self.visuarrs += tf.unstack(Phb1c, axis=-1)
             self.visuarrs += tf.unstack(Lhb1c, axis=-1)
         except:
             pass
+        self.frameWorld = tf.reshape(tf.reduce_mean(self.x, axis=2)[:,0], [self.data_loader.n_lat, -1])
+        print("self.frameWorld", self.frameWorld.shape)
 
         self.valStr = '' if config.is_train else '_val'
         self.saver = tf.train.Saver()# if self.is_train else None
@@ -99,8 +101,8 @@ class Trainer(object):
 
         self.sess = sv.prepare_or_wait_for_session(config=sess_config)
         # start our custom queue runner's threads
-        if True:#self.is_train:
-            self.data_loader.start_threads(self.sess)
+        self.coord = tf.train.Coordinator()
+        tf.train.start_queue_runners(coord=self.coord, sess=self.sess)
         # dirty way to bypass graph finilization error
         g = tf.get_default_graph()
         g._finalized = False
@@ -135,7 +137,7 @@ class Trainer(object):
                     logloss = result['logloss']
                     R2 = result['R2']
                     trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, loss, logloss, R2, self.data_loader.size_op.eval(session=self.sess), self.lr.eval(session=self.sess)))
+                        format(ep, loss, logloss, R2, 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
@@ -148,7 +150,7 @@ class Trainer(object):
 
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
                 try:
-                    visualizer.update(arrays=visuarrs)#, frame=np.concatenate(visuarrs, axis=1))
+                    visualizer.update(arrays=visuarrs, frame=self.frameWorld)#, frame=np.concatenate(visuarrs, axis=1))
                 except:
                     pass
                 #for i in range(63+0*step//1000): self.sess.run(self.x)
@@ -210,18 +212,19 @@ class Trainer(object):
     def build_model_convo(self):
         x = self.x
         print('x:', x)
+        numChanOut = self.y.get_shape().as_list()[1]
 
         for nLay in self.config.hidden.split(','):
             nLay = int(nLay)
-            x = tf.pad(x, paddings=[[0,0],[1,1],[0,0],[0,0]], mode='SYMMETRIC')
+            x = tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')
             print('x:', x)
             if self.config.localConvo:
-                x = LocallyConnected2D(nLay, (3,1), data_format='channels_last')(x)
+                x = LocallyConnected2D(nLay, (3,1), data_format='channels_first')(x)
             else:
-                x = Conv2D(nLay, (3,1), padding='valid', data_format='channels_last')(x)
+                x = Conv2D(nLay, (3,1), padding='valid', data_format='channels_first')(x)
             x = LeakyReLU()(x)
         print('x:', x)
-        x = Conv2D(self.data_loader.Yshape[-1], (1,1), padding='valid', data_format='channels_last')(x)
+        x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
         print('x:', x)
 
         self.pred = x#tf.reshape(x, self.y.get_shape())
@@ -229,7 +232,7 @@ class Trainer(object):
     def build_trainop(self):
         y = self.y
         print('y:', y)
-        numChanOut = y.get_shape().as_list()[-1]
+        numChanOut = y.get_shape().as_list()[1]
         print('numChanOut:', numChanOut)
         print('self.pred:', self.pred)
 
