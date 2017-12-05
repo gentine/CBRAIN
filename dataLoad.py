@@ -16,10 +16,12 @@ class DataLoader:
     def __init__(self, folderPath, config, rawFileBase=''):
         self.config = config
         self.nSampleFetching = 1024
-        self.varnameList = config.dataset.split(',')
         self.fileReader = []
         self.lock = threading.Lock()
-        self.inputNameList = self.config.input_names.split(',')
+        self.inputNames = self.config.input_names.split(',')
+        self.outputNames = config.dataset.split(',')
+        self.varAllList = self.inputNames + self.outputNames
+        self.varNameSplit = len(self.inputNames)
         self.rawFileBase = rawFileBase
         self.reload()
 
@@ -29,6 +31,7 @@ class DataLoader:
         # read addresses and labels from the 'train' folder
         self.rawFiles = {}
         self.rawDates = []
+        self.varDim = {}
         for fn in  glob.glob(cat_dog_train_path):
             date = fn.split('.')[-2]
             self.rawDates += [date]
@@ -42,13 +45,16 @@ class DataLoader:
             self.n_lon = aqua_rg.dimensions['lon'].size
             print(aqua_rg)
             for k in aqua_rg.variables.keys():
+                self.varDim[k] = len(aqua_rg[k].shape)
                 print(fn+': ', k, aqua_rg[k].shape)
             print('n_tim =', self.n_tim)
             print('n_lev =', self.n_lev)
             print('n_lat =', self.n_lat)
             print('n_lon =', self.n_lon)
-            print(aqua_rg.variables['lev'][:])
-            sampX, sampY = self.accessData(0, self.nSampleFetching, aqua_rg)
+            print(aqua_rg.variables['lon'][:])
+            sampX, sampY = self.prepareData(aqua_rg, 0)
+            print('sampX =', sampX.shape)
+            print('sampY =', sampY.shape)
 
         try:
             for i in range(len(self.fileReader)):
@@ -57,26 +63,12 @@ class DataLoader:
             pass
         print("batchSize = ", self.config.batch_size)
 
-#        with h5py.File(nc_file, mode='r') as fh:
-#            for k in fh.keys():
-#                print('nc_file: ', k, fh[k].shape)
-#            self.Nsamples = fh[k].shape[0]
-#            print('Nsamples =', self.Nsamples)
-#            self.Nlevels      = self.mean['QAP'].shape[1]
-#            print('Nlevels = ', self.Nlevels)
-#             sampX, sampY = self.accessData(0, self.nSampleFetching, fh)
-#            self.n_input = sampX.shape[1] # number of inputs 
-#            self.n_output = sampY.shape[1] # number of outputs 
-#             print('sampX = ', sampX.shape)
-#             print('sampY = ', sampY.shape)
-#            print('n_input = ', self.n_input)
-#            print('n_output = ', self.n_output)
-#
-        self.Nsamples = self.n_tim * len(self.rawDates)
+        self.Nsamples = len(self.rawDates) * self.n_tim * self.n_lon * self.n_lat
         self.NumBatch = self.Nsamples // self.config.batch_size
         self.NumBatchTrain = int(self.Nsamples * self.config.frac_train) // self.config.batch_size
         self.indexValidation = self.NumBatchTrain * self.config.batch_size
         self.NumBatchValid = int(self.Nsamples * (1.0 - self.config.frac_train)) // self.config.batch_size
+        print('Nsamples=', self.Nsamples)
         print('NumBatch=', self.NumBatch)
         print('NumBatchTrain=', self.NumBatchTrain)
         print('indexValidation=', self.indexValidation)
@@ -97,8 +89,8 @@ class DataLoader:
         self.posTrain = 0
         self.posValid = 0
 
-        self.Xshape = list(sampX.shape[1:])
-        self.Yshape = list(sampY.shape[1:])
+        self.Xshape = list(sampX.shape)
+        self.Yshape = list(sampY.shape)
         print('Xshape', self.Xshape)
         print('Yshape', self.Yshape)
 
@@ -119,49 +111,30 @@ class DataLoader:
             return arr*2.5e6
         return arr
 
-    def readDatasetY(self, s, l, fileReader):
-        data = []
-        for k in self.varnameList:
-            try:
-                arr = fileReader[k][s:s+l,:,:,:].transpose([0,2,3,1])
-            except:
-                arr = fileReader[k][s:s+l][:,None,:,:].transpose([0,2,3,1])
+    def accessTimeData(self, fileReader, names, iTim, log=False):
+        inputs = []
+        for k in names:
+            if self.varDim[k] == 4:
+                arr = fileReader[k][iTim]
+            elif self.varDim[k] == 3:
+                arr = fileReader[k][iTim][None]
             if self.config.convert_units:
                 arr = self.convertUnits(k, arr)
-            data += [arr]
-        if self.config.convo:
-            y_data = np.stack(data, axis=-1)
-        else:
-            y_data = np.concatenate(data, axis=-1) #[b,cc]
-        
-        return y_data
-
-    def accessData(self, s, l, fileReader):
-        inputs = []
-        for k in self.inputNameList:
-            try:
-                arr = fileReader[k][s:s+l,:,:,:].transpose([0,2,3,1])
-            except:
-                arr = fileReader[k][s:s+l][:,None,:,:].transpose([0,2,3,1])
-            print(k, arr.shape)
-
+            #print(k, arr.shape)
             if self.config.convo:
-                if arr.shape[-1] == 1:
-                    arr = np.tile(arr, (1,1,1,self.n_lev))
-                #arr = arr[:,:,:,:,None] #[t,lat,lon,lev,1]
-                print(k, arr.shape)
+                if arr.shape[0] == 1:
+                    arr = np.tile(arr, (self.n_lev,1,1))
+            if log: print(k, arr.shape)
             inputs += [arr]
-        # input output data
         if self.config.convo:
-            inX = np.stack(inputs, axis=-1) #[b,lat,lon,lev,chan]
+            inX = np.stack(inputs, axis=0)
         else: # make a soup of numbers
-            inX = np.concatenate(inputs, axis=-1) #[b,lon,lat,cc]
-        y_data = self.readDatasetY(s, l, fileReader)
+            inX = np.concatenate(inputs, axis=-1)
+        return inX
 
-        # flattens t,lon,lat
-        inX = inX.reshape((-1,)+inX.shape[-2:])
-        y_data = y_data.reshape((-1,)+y_data.shape[-2:])
-        return inX, y_data
+    def prepareData(self, fileReader, iTim):
+        samp = self.accessTimeData(fileReader, self.varAllList, 0)
+        return np.split(samp, [self.varNameSplit])
 
     def sampleTrain(self, ithFileReader):
 #        self.lock.acquire()
@@ -237,3 +210,72 @@ class DataLoader:
             print("Initializing queue, current size = %i/%i" % (num_samples_in_queue, self.capacityTrain))
             time.sleep(2)
         return threads
+
+    def recordFileName(self, filename):
+        return filename + '.tfrecords' # address to save the TFRecords file into
+
+    def makeTfRecordsDate(self, date):
+        def _bytes_feature(value):
+            return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+        def _floats_feature(value):
+            return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+        filenameBase = self.recordFileName(trainingDataDirTFRecords+date+'/s{0:02d}')
+        folderName = '/'.join(filenameBase.split('/')[:-1])
+        #print(filenameBase)
+        #print(folderName)
+        if not os.path.exists(folderName):
+            os.makedirs(folderName)
+        shards = self.n_tim
+        sampBar = tqdm(range(shards), leave=False) 
+        with nc.Dataset(self.rawFiles[date], mode='r') as aqua_rg:
+            for iTim in sampBar:
+                # open the TFRecords file
+                filename = filenameBase.format(iTim)
+                #print('opening the TFRecords file', filename)
+                writer = tf.python_io.TFRecordWriter(filename)
+                sampBar.set_description(folderName)
+                sX, sY = self.prepareData(aqua_rg, iTim)
+                # Create a feature
+                #print(sX.shape, sX.dtype)
+                #print(sY.shape, sY.dtype)
+                if True:
+                    if True:
+                        feature = {'X': _bytes_feature(tf.compat.as_bytes(sX.tostring())),
+                                   'Y': _bytes_feature(tf.compat.as_bytes(sY.tostring()))
+                                   }
+#                for iLat in range(sX.shape[-2]):
+#                    for iLon in range(sX.shape[-1]):
+#                        feature = {'X': _bytes_feature(tf.compat.as_bytes(sX[:,:,iLat,iLon].tostring())),
+#                               'Y': _bytes_feature(tf.compat.as_bytes(sY[:,:,iLat,iLon].tostring()))
+#                               }
+                        # Create an example protocol buffer
+                        example = tf.train.Example(features=tf.train.Features(feature=feature))
+                        # Serialize to string and write on the file
+                        writer.write(example.SerializeToString())
+                writer.close()
+                sys.stdout.flush()
+
+    def makeTfRecords(self, n_threads=4):
+        """ Start background threads to feed queue """
+        threads = []
+        print("starting %d data threads for making records" % n_threads)
+#        for k in range(len(self.rawDates)):
+#            t = threading.Thread(target=self.makeTfRecordsDate, args=(self.rawDates[k]))
+#            t.daemon = True # thread will close when parent quits
+#            t.start()
+#            threads.append(t)
+        daysBar = tqdm(range(len(self.rawDates)))
+        for k in daysBar:
+            date = self.rawDates[k]
+            self.makeTfRecordsDate(date)
+
+
+if __name__ == "__main__":
+    config, unparsed = get_config()
+    print(Fore.GREEN, 'config\n', config)
+    print(Fore.RED, 'unparsed\n', unparsed)
+    print(Style.RESET_ALL)
+    if unparsed:
+        assert(False)
+    dh = DataLoader(trainingDataDir, config, raw_file_base)
+    dh.makeTfRecords()
