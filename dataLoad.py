@@ -19,14 +19,14 @@ class DataLoader:
         self.fileReader = []
         self.lock = threading.Lock()
         self.inputNames = self.config.input_names.split(',')
-        self.outputNames = config.dataset.split(',')
+        self.outputNames = config.output_names.split(',')
         self.varAllList = self.inputNames + self.outputNames
+        print('self.varAllList', self.varAllList)
         self.varNameSplit = len(self.inputNames)
         self.rawFileBase = rawFileBase
         self.reload()
 
     def reload(self):
-        shuffle_data = False  # shuffle the addresses before saving
         cat_dog_train_path = trainingDataDirRaw+'*.nc'
         # read addresses and labels from the 'train' folder
         self.rawFiles = {}
@@ -47,12 +47,15 @@ class DataLoader:
             for k in aqua_rg.variables.keys():
                 self.varDim[k] = len(aqua_rg[k].shape)
                 print(fn+': ', k, aqua_rg[k].shape)
-            print('n_tim =', self.n_tim)
-            print('n_lev =', self.n_lev)
-            print('n_lat =', self.n_lat)
-            print('n_lon =', self.n_lon)
-            print(aqua_rg.variables['lon'][:])
-            sampX, sampY = self.prepareData(aqua_rg, 0)
+            print('n_tim =', self.n_tim, " = ", aqua_rg.variables['time'][:3],"...",aqua_rg.variables['time'][-3:])
+            print('n_lev =', self.n_lev, " = ", aqua_rg.variables['lev'][:3],"...",aqua_rg.variables['lev'][-3:])
+            print('n_lat =', self.n_lat, " = ", aqua_rg.variables['lat'][:3],"...",aqua_rg.variables['lat'][-3:])
+            print('n_lon =', self.n_lon, " = ", aqua_rg.variables['lon'][:3],"...",aqua_rg.variables['lon'][-3:])
+            # if flattened, the split is not the index of the first output name, but the index of the first output once flattened
+            if not self.config.convo:
+                self.varNameSplit = self.accessTimeData(aqua_rg, self.inputNames, 0, doLog=True).shape[0]
+            print('self.varNameSplit', self.varNameSplit)
+            sampX, sampY = self.prepareData(aqua_rg, 0, doLog=True)
             print('sampX =', sampX.shape)
             print('sampY =', sampY.shape)
 
@@ -65,29 +68,6 @@ class DataLoader:
 
         self.Nsamples = len(self.rawDates) * self.n_tim * self.n_lon * self.n_lat
         self.NumBatch = self.Nsamples // self.config.batch_size
-        self.NumBatchTrain = int(self.Nsamples * self.config.frac_train) // self.config.batch_size
-        self.indexValidation = self.NumBatchTrain * self.config.batch_size
-        self.NumBatchValid = int(self.Nsamples * (1.0 - self.config.frac_train)) // self.config.batch_size
-        print('Nsamples=', self.Nsamples)
-        print('NumBatch=', self.NumBatch)
-        print('NumBatchTrain=', self.NumBatchTrain)
-        print('indexValidation=', self.indexValidation)
-        print('NumBatchValid=', self.NumBatchValid)
-
-        self.samplesTrain = range(0, self.indexValidation, self.nSampleFetching)
-        self.randSamplesTrain = list(self.samplesTrain)
-        if self.config.randomize:
-            random.shuffle(self.randSamplesTrain)
-        self.samplesValid = range(self.indexValidation, self.Nsamples, self.nSampleFetching)
-        self.randSamplesValid = list(self.samplesValid)
-        if self.config.randomize:
-            random.shuffle(self.randSamplesValid)
-        self.numFetchesTrain = len(self.randSamplesTrain)
-        self.numFetchesValid = len(self.randSamplesValid)
-        print('randSamplesTrain', self.randSamplesTrain[:16], self.numFetchesTrain)
-        print('randSamplesValid', self.randSamplesValid[:16], self.numFetchesValid)
-        self.posTrain = 0
-        self.posValid = 0
 
         self.Xshape = list(sampX.shape)
         self.Yshape = list(sampY.shape)
@@ -104,7 +84,7 @@ class DataLoader:
             print(Fore.RED, 'days', [fn.split('/')[-1] for fn in folders], Style.RESET_ALL)
             self.tfRecordsFiles = []
             for fn in folders:
-                self.tfRecordsFiles += glob.glob(fn+"/*.tfrecords")
+                self.tfRecordsFiles += glob.glob(fn+"/*" + ('_c' if self.config.convo else '_f') + ".tfrecords")
             self.tfRecordsFiles = sorted(self.tfRecordsFiles)
             print("tfRecordsFiles", len(self.tfRecordsFiles))
 
@@ -125,7 +105,7 @@ class DataLoader:
             return arr*2.5e6
         return arr
 
-    def accessTimeData(self, fileReader, names, iTim, log=False):
+    def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
         for k in names:
             if self.varDim[k] == 4:
@@ -138,97 +118,26 @@ class DataLoader:
             if self.config.convo:
                 if arr.shape[0] == 1:
                     arr = np.tile(arr, (self.n_lev,1,1))
-            if log: print(k, arr.shape)
+            if doLog: 
+                print('accessTimeData', k, arr.shape)
             inputs += [arr]
         if self.config.convo:
             inX = np.stack(inputs, axis=0)
         else: # make a soup of numbers
-            inX = np.concatenate(inputs, axis=-1)
+            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
+        if doLog: 
+            print('accessTimeData', inX.shape)
         return inX
 
-    def prepareData(self, fileReader, iTim):
-        samp = self.accessTimeData(fileReader, self.varAllList, iTim)
+    def prepareData(self, fileReader, iTim, doLog=False):
+        samp = self.accessTimeData(fileReader, self.varAllList, iTim, doLog)
         return np.split(samp, [self.varNameSplit])
-
-    def sampleTrain(self, ithFileReader):
-#        self.lock.acquire()
-        s = self.randSamplesTrain[self.posTrain]
-        #print(ithFileReader, self.posTrain, s)
-        self.posTrain += 1
-        self.posTrain %= self.numFetchesTrain
-#        self.lock.release()
-        x,y = self.accessData(s, self.nSampleFetching, self.fileReader[ithFileReader])
-        return x,y
-
-    def sampleValid(self, ithFileReader):
-        s = self.randSamplesValid[self.posValid]
-        self.posValid += 1
-        self.posValid %= self.numFetchesValid
-        x,y = self.accessData(s, self.nSampleFetching, self.fileReader[ithFileReader])
-        return x,y
-
-    def data_iterator(self, ithFileReader):
-        """ A simple data iterator """
-        print('data_iterator', ithFileReader, threading.current_thread())
-        while True:
-            sampX, sampY = self.sampleTrain(ithFileReader) if self.config.is_train else self.sampleValid(ithFileReader)
-            yield sampX, sampY
-
-    def prepareQueue(self):
-        return
-        with tf.name_scope('prepareQueue'):
-            self.dataX = tf.placeholder(dtype=tf.float32, shape=[None]+self.Xshape)
-            self.dataY = tf.placeholder(dtype=tf.float32, shape=[None]+self.Yshape)
-
-            self.capacityTrain = max(self.nSampleFetching * 32, self.config.batch_size * 8) if self.config.is_train else self.config.batch_size
-            if self.config.randomize:
-                self.queue = tf.RandomShuffleQueue(shapes=[self.Xshape, self.Yshape],
-                                               dtypes=[tf.float32, tf.float32],
-                                               capacity=self.capacityTrain,
-                                               min_after_dequeue=self.capacityTrain // 2
-                                               )
-            else:
-                self.queue = tf.FIFOQueue(shapes=[self.Xshape, self.Yshape],
-                                               dtypes=[tf.float32, tf.float32],
-                                               capacity=self.capacityTrain
-                                               )
-            self.enqueue_op = self.queue.enqueue_many([self.dataX, self.dataY])
-            self.size_op = self.queue.size()
 
     def get_inputs(self):
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
-        with tf.name_scope('dequeue'):
-            train0Valid1 = tf.placeholder_with_default(1, [], name='train0Valid1')
-            b_X, b_Y = self.queue.dequeue_many(self.config.batch_size)
-            print("b_X",b_X.get_shape(), "b_Y",b_Y.get_shape())
-            return b_X, b_Y
-
-    def thread_main(self, sess, ithFileReader):
-        print('thread_main', ithFileReader, threading.current_thread())
-        while len(self.fileReader) <= ithFileReader + 1:
-            self.fileReader += [h5py.File(nc_file, mode='r')]
-        for dtX, dtY in self.data_iterator(ithFileReader):
-            sess.run(self.enqueue_op, feed_dict={self.dataX:dtX, self.dataY:dtY})
-
-    def start_threads(self, sess, n_threads=4):
-        """ Start background threads to feed queue """
-        threads = []
-        print("starting %d data threads for training" % n_threads)
-        for n in range(n_threads):
-            t = threading.Thread(target=self.thread_main, args=(sess,0,))
-            t.daemon = True # thread will close when parent quits
-            t.start()
-            threads.append(t)
-        # Make sure the queueu is filled with some examples (n = 500)
-        num_samples_in_queue = 0
-        while num_samples_in_queue < self.capacityTrain:
-            num_samples_in_queue = sess.run(self.size_op)
-            print("Initializing queue, current size = %i/%i" % (num_samples_in_queue, self.capacityTrain))
-            time.sleep(2)
-        return threads
 
     def recordFileName(self, filename):
-        return filename + '.tfrecords' # address to save the TFRecords file into
+        return filename + ('_c' if self.config.convo else '_f') + '.tfrecords' # address to save the TFRecords file into
 
     def makeTfRecordsDate(self, date):
         def _bytes_feature(value):

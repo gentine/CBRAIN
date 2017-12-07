@@ -44,12 +44,12 @@ def prepare_dirs_and_logger(config):
         #        config.model_name = "{}_{}".format(config.dataset, config.load_path)
     else:
         print(4)
-        config.model_name = get_time() +'_'+ str(config.dataset) + '_layers_' + config.hidden + '_' + '_kdr_' + str(config.keep_dropout_rate)  + '_ac_' + str(config.act) + '_convo_' + str(config.convo) + '_localconvo_' + str(config.localConvo) + '_variables_' + config.input_names + '_batchsize_' + str(config.batch_size) + config.addon#"{}_{}_{}".format(config.dataset, get_time(), ','.join(config.hidden.split(',')))
+        config.model_name = get_time() +'_'+ str(config.output_names) + '_layers_' + config.hidden + '_' + '_kdr_' + str(config.keep_dropout_rate)  + '_ac_' + str(config.act) + '_convo_' + str(config.convo) + '_localconvo_' + str(config.localConvo) + '_variables_' + config.input_names + '_batchsize_' + str(config.batch_size) + config.addon#"{}_{}_{}".format(config.dataset, get_time(), ','.join(config.hidden.split(',')))
     
 
     if not hasattr(config, 'model_dir'):
         config.model_dir = os.path.join(config.log_dir, config.model_name)
-    config.data_path = os.path.join(config.data_dir, config.dataset)
+    config.data_path = os.path.join(config.data_dir, config.output_names)
 
     for path in [config.log_dir, config.data_dir, config.model_dir]:
         if not os.path.exists(path):

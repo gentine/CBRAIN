@@ -32,7 +32,11 @@ def main(config):
     else:
         if config.load_path:
             # automatically reloads the correct arguments for the network
+<<<<<<< HEAD
             config = load_config(config, ['batch_size', 'dataset', 'hidden', 'keep_dropout_rate', 'act', 'addon', 'normalize', 'convo', 'input_names', 'frac_train', 'randomize', 'normalize', 'random_seed','logloss'])
+=======
+            config = load_config(config, ['batch_size', 'input_names', 'output_names', 'hidden', 'keep_dropout_rate', 'act', 'addon', 'convo', 'localConvo', 'frac_train', 'randomize', 'random_seed', 'convert_units'])
+>>>>>>> 39585b38993f3baadd59b3b458fb305cad1b6a2d
             print(Fore.RED, 'config\n', config)
             print(Style.RESET_ALL)
         #setattr(config, 'batch_size', 1024)
@@ -41,14 +45,11 @@ def main(config):
         do_shuffle = False
     save_config(config)
     with DataLoader(trainingDataDir, config) as data_loader:
-        with tf.device("/cpu:0"):
-            data_loader.prepareQueue()
-        #data_loader = get_loader(data_path, config.batch_size, config.input_scale_size, config.data_format, config.split)
         trainer = Trainer(config, data_loader)
 
         if config.is_train:
             save_config(config)
-            print('batches=', data_loader.NumBatchTrain)
+            print('batches=', data_loader.NumBatch)
             threadValid = None
             isTraining = True
             if config.run_validation:
@@ -70,7 +71,7 @@ def main(config):
         else:
             if not config.load_path:
                 raise Exception("[!] You should specify `load_path` to load a pretrained model")
-            print('batches=', data_loader.NumBatchValid)
+            print('batches=', data_loader.NumBatch)
             trainer.validate()
 
 

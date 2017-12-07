@@ -79,7 +79,7 @@ class Trainer(object):
             self.visuarrs += tf.unstack(Yhb1c, axis=-1)
             self.visuarrs += tf.unstack(Phb1c, axis=-1)
             self.visuarrs += tf.unstack(Lhb1c, axis=-1)
-            self.visuarrs += [self.frameWorld]
+            #self.visuarrs += [self.frameWorld]
             print("self.frameWorld", self.frameWorld.shape)
         except:
             pass
@@ -118,7 +118,7 @@ class Trainer(object):
             pass
         totStep = 0
         for ep in range(1, self.config.epoch + 1):
-            trainBar = trange(self.start_step, self.data_loader.NumBatchTrain)
+            trainBar = trange(self.start_step, self.data_loader.NumBatch)
             #for i in range(70): self.sess.run(self.visuarrs)
             for step in trainBar:
                 totStep += 1
@@ -191,29 +191,25 @@ class Trainer(object):
                 loss = result['loss']
                 logloss = result['logloss']
                 R2 = result['R2']
-                trainBar.set_description("q:{}, L:{:.6f}, logL:{:.6f}, R2:{:+.3f}". \
-                    format(self.data_loader.size_op.eval(session=self.sess), loss, logloss, R2))
+                trainBar.set_description("L:{:.6f}, logL:{:.6f}, R2:{:+.3f}". \
+                    format(loss, logloss, R2))
             time.sleep(sleepTime)
         exit(0)
 
     def build_model(self):
         x = self.x
         print('x:', x)
+        numChanOut = self.y.get_shape().as_list()[1]
 
-        net = tf.contrib.layers.flatten(x)
-        print('net', net)
-        nLayPrev = self.data_loader.n_input
-        iLay = 0
+        x = Flatten()(x)
         for nLay in self.config.hidden.split(','):
-            iLay += 1
             nLay = int(nLay)
-            if(self.act==0): # differnt types of activation functions
-                net = nn_layer(net, nLayPrev, nLay, self.keep_dropout_rate, 'layer'+str(iLay),act=tf.nn.relu)
-            else:
-                net = nn_layer(net, nLayPrev, nLay, self.keep_dropout_rate, 'layer'+str(iLay),act=tf.nn.sigmoid)
-            nLayPrev = nLay
-
-        self.pred = nn_layer(net, nLayPrev, self.data_loader.n_output, 1., 'layerout', act=tf.identity)
+            print('x:', x)
+            x = Dense(nLay, activation=self.config.act)(x)
+        x = tf.stack([tf.stack([x], axis=-1)], axis=-1)
+        x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
+        print('self.pred:', x)
+        self.pred = x#tf.reshape(x, self.y.get_shape())
 
     def build_model_convo(self):
         x = self.x
@@ -231,8 +227,7 @@ class Trainer(object):
             x = LeakyReLU()(x)
         print('x:', x)
         x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
-        print('x:', x)
-
+        print('self.pred:', x)
         self.pred = x#tf.reshape(x, self.y.get_shape())
 
     def build_trainop(self):
@@ -301,50 +296,3 @@ class Trainer(object):
             with tf.control_dependencies(update_ops):
                 self.optim = train_op
 
-def variable_summaries(var):
-  """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-  with tf.name_scope('summaries'):
-    mean = tf.reduce_mean(var)
-    tf.summary.scalar('mean', mean)
-    with tf.name_scope('stddev'):
-      stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-    tf.summary.scalar('stddev', stddev)
-    tf.summary.scalar('max', tf.reduce_max(var))
-    tf.summary.scalar('min', tf.reduce_min(var))
-    tf.summary.histogram('histogram', var)
-
-def weight_variable(shape):
-  initial = tf.truncated_normal(shape, stddev=1.)
-  return tf.Variable(initial)
-
-def bias_variable(shape):
-  initial = tf.truncated_normal(shape, stddev=1.)
-  return tf.Variable(initial)
-
-def nn_layer(input_tensor, input_dim, output_dim, keep_dropout_rate, layer_name,  act):
-  # Adding a name scope ensures logical grouping of the layers in the graph.
-  with tf.name_scope(layer_name):
-    # This Variable will hold the state of the weights for the layer
-    with tf.name_scope('weights'):
-      weights = weight_variable([input_dim, output_dim])
-      variable_summaries(weights)
-    with tf.name_scope('biases'):
-      biases = bias_variable([output_dim])
-      variable_summaries(biases)
-    with tf.name_scope('Wx_plus_b'):
-      preactivate = tf.matmul(input_tensor, weights) + biases
-      tf.summary.histogram('pre_activations', preactivate)
-    activations = act(preactivate, name='activation')
-    # apply a dropout
-    tf.summary.histogram('activations', activations)
-    if keep_dropout_rate<0.9999:
-        activations = tf.nn.dropout(activations, keep_dropout_rate)
-        tf.summary.histogram('dropout', activations)
-    print('layer_name', layer_name)
-    print('input_tensor', input_tensor)
-    print('input_dim', input_dim, ' output_dim', output_dim)
-    print('weights', weights)
-    print('biases', biases)
-    print('preactivate', preactivate)
-    print('activations', activations)
-    return activations
