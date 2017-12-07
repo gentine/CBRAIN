@@ -32,15 +32,9 @@ def main(config):
     else:
         if config.load_path:
             # automatically reloads the correct arguments for the network
-<<<<<<< HEAD
             config = load_config(config, ['batch_size', 'input_names', 'output_names', 'hidden', 
                                           'keep_dropout_rate', 'act', 'addon', 'convo', 'localConvo', 
                                           'frac_train', 'randomize', 'random_seed', 'convert_units','logloss'])
-=======
-            config = load_config(config, ['batch_size', 'input_names', 'output_names', 'hidden', 'keep_dropout_rate', \
-                                          'act', 'addon', 'convo', 'localConvo', 'frac_train', 'randomize',           \
-                                          'random_seed', 'convert_units', 'logloss'])
->>>>>>> 99321a3bc29ca9f3566f621688cbc0dc791aeaf1
             print(Fore.RED, 'config\n', config)
             print(Style.RESET_ALL)
         #setattr(config, 'batch_size', 1024)
