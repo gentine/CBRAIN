@@ -27,12 +27,13 @@ class DataLoader:
         self.reload()
 
     def reload(self):
-        cat_dog_train_path = trainingDataDirRaw+'*.nc'
+        raw_data_train_path = trainingDataDirRaw+'*.nc'
+        print(Fore.YELLOW, 'raw_data_train_path', raw_data_train_path, Style.RESET_ALL)
         # read addresses and labels from the 'train' folder
         self.rawFiles = {}
         self.rawDates = []
         self.varDim = {}
-        for fn in  glob.glob(cat_dog_train_path):
+        for fn in  glob.glob(raw_data_train_path):
             date = fn.split('.')[-2]
             self.rawDates += [date]
             self.rawFiles[date] = fn

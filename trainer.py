@@ -206,7 +206,7 @@ class Trainer(object):
             nLay = int(nLay)
             print('x:', x)
             x = Dense(nLay, activation=self.config.act)(x)
-        x = tf.stack([tf.stack([x], axis=-1)], axis=-1)
+        x = tf.expand_dims(tf.expand_dims(x, -1),-1)
         x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
         print('self.pred:', x)
         self.pred = x#tf.reshape(x, self.y.get_shape())
