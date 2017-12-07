@@ -41,8 +41,6 @@ def main(config):
         do_shuffle = False
     save_config(config)
     with DataLoader(trainingDataDir, config) as data_loader:
-        with tf.device("/cpu:0"):
-            data_loader.prepareQueue()
         trainer = Trainer(config, data_loader)
 
         if config.is_train:

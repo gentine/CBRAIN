@@ -133,82 +133,8 @@ class DataLoader:
         samp = self.accessTimeData(fileReader, self.varAllList, iTim, doLog)
         return np.split(samp, [self.varNameSplit])
 
-    def sampleTrain(self, ithFileReader):
-#        self.lock.acquire()
-        s = self.randSamplesTrain[self.posTrain]
-        #print(ithFileReader, self.posTrain, s)
-        self.posTrain += 1
-        self.posTrain %= self.numFetchesTrain
-#        self.lock.release()
-        x,y = self.accessData(s, self.nSampleFetching, self.fileReader[ithFileReader])
-        return x,y
-
-    def sampleValid(self, ithFileReader):
-        s = self.randSamplesValid[self.posValid]
-        self.posValid += 1
-        self.posValid %= self.numFetchesValid
-        x,y = self.accessData(s, self.nSampleFetching, self.fileReader[ithFileReader])
-        return x,y
-
-    def data_iterator(self, ithFileReader):
-        """ A simple data iterator """
-        print('data_iterator', ithFileReader, threading.current_thread())
-        while True:
-            sampX, sampY = self.sampleTrain(ithFileReader) if self.config.is_train else self.sampleValid(ithFileReader)
-            yield sampX, sampY
-
-    def prepareQueue(self):
-        return
-        with tf.name_scope('prepareQueue'):
-            self.dataX = tf.placeholder(dtype=tf.float32, shape=[None]+self.Xshape)
-            self.dataY = tf.placeholder(dtype=tf.float32, shape=[None]+self.Yshape)
-
-            self.capacityTrain = max(self.nSampleFetching * 32, self.config.batch_size * 8) if self.config.is_train else self.config.batch_size
-            if self.config.randomize:
-                self.queue = tf.RandomShuffleQueue(shapes=[self.Xshape, self.Yshape],
-                                               dtypes=[tf.float32, tf.float32],
-                                               capacity=self.capacityTrain,
-                                               min_after_dequeue=self.capacityTrain // 2
-                                               )
-            else:
-                self.queue = tf.FIFOQueue(shapes=[self.Xshape, self.Yshape],
-                                               dtypes=[tf.float32, tf.float32],
-                                               capacity=self.capacityTrain
-                                               )
-            self.enqueue_op = self.queue.enqueue_many([self.dataX, self.dataY])
-            self.size_op = self.queue.size()
-
     def get_inputs(self):
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
-        with tf.name_scope('dequeue'):
-            train0Valid1 = tf.placeholder_with_default(1, [], name='train0Valid1')
-            b_X, b_Y = self.queue.dequeue_many(self.config.batch_size)
-            print("b_X",b_X.get_shape(), "b_Y",b_Y.get_shape())
-            return b_X, b_Y
-
-    def thread_main(self, sess, ithFileReader):
-        print('thread_main', ithFileReader, threading.current_thread())
-        while len(self.fileReader) <= ithFileReader + 1:
-            self.fileReader += [h5py.File(nc_file, mode='r')]
-        for dtX, dtY in self.data_iterator(ithFileReader):
-            sess.run(self.enqueue_op, feed_dict={self.dataX:dtX, self.dataY:dtY})
-
-    def start_threads(self, sess, n_threads=4):
-        """ Start background threads to feed queue """
-        threads = []
-        print("starting %d data threads for training" % n_threads)
-        for n in range(n_threads):
-            t = threading.Thread(target=self.thread_main, args=(sess,0,))
-            t.daemon = True # thread will close when parent quits
-            t.start()
-            threads.append(t)
-        # Make sure the queueu is filled with some examples (n = 500)
-        num_samples_in_queue = 0
-        while num_samples_in_queue < self.capacityTrain:
-            num_samples_in_queue = sess.run(self.size_op)
-            print("Initializing queue, current size = %i/%i" % (num_samples_in_queue, self.capacityTrain))
-            time.sleep(2)
-        return threads
 
     def recordFileName(self, filename):
         return filename + ('_c' if self.config.convo else '_f') + '.tfrecords' # address to save the TFRecords file into
