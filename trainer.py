@@ -54,6 +54,7 @@ class Trainer(object):
         self.lr_update_step = config.lr_update_step
         self.keep_dropout_rate = config.keep_dropout_rate
         self.act        = config.act
+        self.logloss    = config.logloss
         
         self.is_train = config.is_train
         #with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
@@ -243,8 +244,10 @@ class Trainer(object):
 
         # Add ops to save and restore all the variables.
         with tf.name_scope('loss'):
-#            self.losses = tf.log(tf.square(y - self.pred) + 1e-36) / tf.log(10.0)
-            self.losses = tf.abs(y - self.pred)
+            if self.logloss:
+                self.losses = tf.log(tf.square(y - self.pred) + 1e-36) / tf.log(10.0)
+            else:
+                self.losses = tf.abs(y - self.pred)
             print('self.losses:', self.losses)
             self.loss = tf.reduce_mean(self.losses, name='loss')
             print('self.loss:', self.loss)
@@ -290,7 +293,7 @@ class Trainer(object):
 
             optimizer = optimizer(self.lr)
 
-            slim.losses.add_loss(self.loss)
+            slim.losses.add_loss(self.loss) # use log loss instead
             total_loss = slim.losses.get_total_loss()
             train_op = slim.learning.create_train_op(total_loss, optimizer, global_step=self.step)#optimizer.minimize(self.loss)
             
