@@ -21,16 +21,15 @@ net_arg.add_argument('--hidden',  type=str, default='5,5', help='comma separated
 
 # Data
 data_arg = add_argument_group('Data')
-data_arg.add_argument('--dataset', type=str, default='SPDT,SPDQ', help='names of predicted variable(s)')
+data_arg.add_argument('--output_names', type=str, default='SPDT,SPDQ', help='names of predicted variable(s)')
 data_arg.add_argument('--batch_size', type=int, default=1024)
 data_arg.add_argument('--frac_train', type=float, default=0.8)
 data_arg.add_argument('--local', type=str2bool, default=False)
 data_arg.add_argument('--epoch', type=int, default=200)
 data_arg.add_argument('--randomize', type=str2bool, default=True)
-data_arg.add_argument('--normalize', type=str2bool, default=True)
 data_arg.add_argument('--convo', type=str2bool, default=False)
 data_arg.add_argument('--localConvo', type=str2bool, default=False)
-data_arg.add_argument('--input_names', type=str, default='TAP,QAP,OMEGA,SHFLX,LHFLX', help='names of input variables')
+data_arg.add_argument('--input_names', type=str, default='TAP,QAP,FLUT,SHFLX,LHFLX,PS', help='names of input variables')
 data_arg.add_argument('--convert_units', type=str2bool, default=True, help='flag to convert SPDT and SPDQ into units of W/kg')
 
 
@@ -62,7 +61,7 @@ misc_arg.add_argument('--log_level', type=str, default='INFO', choices=['INFO', 
 misc_arg.add_argument('--log_dir', type=str, default='logs')
 misc_arg.add_argument('--data_dir', type=str, default='data')
 misc_arg.add_argument('--random_seed', type=int, default=123)
-misc_arg.add_argument('--act', type=int, default=0) # 0->tf.nn.relu, 1->tf.nn.sigmoid
+misc_arg.add_argument('--act', type=str, default='relu')
 misc_arg.add_argument('--addon', type=str, default='')
 
 def get_config():

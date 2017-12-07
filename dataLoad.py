@@ -19,14 +19,14 @@ class DataLoader:
         self.fileReader = []
         self.lock = threading.Lock()
         self.inputNames = self.config.input_names.split(',')
-        self.outputNames = config.dataset.split(',')
+        self.outputNames = config.output_names.split(',')
         self.varAllList = self.inputNames + self.outputNames
+        print('self.varAllList', self.varAllList)
         self.varNameSplit = len(self.inputNames)
         self.rawFileBase = rawFileBase
         self.reload()
 
     def reload(self):
-        shuffle_data = False  # shuffle the addresses before saving
         cat_dog_train_path = trainingDataDirRaw+'*.nc'
         # read addresses and labels from the 'train' folder
         self.rawFiles = {}
@@ -47,12 +47,15 @@ class DataLoader:
             for k in aqua_rg.variables.keys():
                 self.varDim[k] = len(aqua_rg[k].shape)
                 print(fn+': ', k, aqua_rg[k].shape)
-            print('n_tim =', self.n_tim)
-            print('n_lev =', self.n_lev)
-            print('n_lat =', self.n_lat)
-            print('n_lon =', self.n_lon)
-            print(aqua_rg.variables['lon'][:])
-            sampX, sampY = self.prepareData(aqua_rg, 0)
+            print('n_tim =', self.n_tim, " = ", aqua_rg.variables['time'][:3],"...",aqua_rg.variables['time'][-3:])
+            print('n_lev =', self.n_lev, " = ", aqua_rg.variables['lev'][:3],"...",aqua_rg.variables['lev'][-3:])
+            print('n_lat =', self.n_lat, " = ", aqua_rg.variables['lat'][:3],"...",aqua_rg.variables['lat'][-3:])
+            print('n_lon =', self.n_lon, " = ", aqua_rg.variables['lon'][:3],"...",aqua_rg.variables['lon'][-3:])
+            # if flattened, the split is not the index of the first output name, but the index of the first output once flattened
+            if not self.config.convo:
+                self.varNameSplit = self.accessTimeData(aqua_rg, self.inputNames, 0, doLog=True).shape[0]
+            print('self.varNameSplit', self.varNameSplit)
+            sampX, sampY = self.prepareData(aqua_rg, 0, doLog=True)
             print('sampX =', sampX.shape)
             print('sampY =', sampY.shape)
 
@@ -65,29 +68,6 @@ class DataLoader:
 
         self.Nsamples = len(self.rawDates) * self.n_tim * self.n_lon * self.n_lat
         self.NumBatch = self.Nsamples // self.config.batch_size
-        self.NumBatchTrain = int(self.Nsamples * self.config.frac_train) // self.config.batch_size
-        self.indexValidation = self.NumBatchTrain * self.config.batch_size
-        self.NumBatchValid = int(self.Nsamples * (1.0 - self.config.frac_train)) // self.config.batch_size
-        print('Nsamples=', self.Nsamples)
-        print('NumBatch=', self.NumBatch)
-        print('NumBatchTrain=', self.NumBatchTrain)
-        print('indexValidation=', self.indexValidation)
-        print('NumBatchValid=', self.NumBatchValid)
-
-        self.samplesTrain = range(0, self.indexValidation, self.nSampleFetching)
-        self.randSamplesTrain = list(self.samplesTrain)
-        if self.config.randomize:
-            random.shuffle(self.randSamplesTrain)
-        self.samplesValid = range(self.indexValidation, self.Nsamples, self.nSampleFetching)
-        self.randSamplesValid = list(self.samplesValid)
-        if self.config.randomize:
-            random.shuffle(self.randSamplesValid)
-        self.numFetchesTrain = len(self.randSamplesTrain)
-        self.numFetchesValid = len(self.randSamplesValid)
-        print('randSamplesTrain', self.randSamplesTrain[:16], self.numFetchesTrain)
-        print('randSamplesValid', self.randSamplesValid[:16], self.numFetchesValid)
-        self.posTrain = 0
-        self.posValid = 0
 
         self.Xshape = list(sampX.shape)
         self.Yshape = list(sampY.shape)
@@ -104,7 +84,7 @@ class DataLoader:
             print(Fore.RED, 'days', [fn.split('/')[-1] for fn in folders], Style.RESET_ALL)
             self.tfRecordsFiles = []
             for fn in folders:
-                self.tfRecordsFiles += glob.glob(fn+"/*.tfrecords")
+                self.tfRecordsFiles += glob.glob(fn+"/*" + ('_c' if self.config.convo else '_f') + ".tfrecords")
             self.tfRecordsFiles = sorted(self.tfRecordsFiles)
             print("tfRecordsFiles", len(self.tfRecordsFiles))
 
@@ -125,7 +105,7 @@ class DataLoader:
             return arr*2.5e6
         return arr
 
-    def accessTimeData(self, fileReader, names, iTim, log=False):
+    def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
         for k in names:
             if self.varDim[k] == 4:
@@ -138,16 +118,19 @@ class DataLoader:
             if self.config.convo:
                 if arr.shape[0] == 1:
                     arr = np.tile(arr, (self.n_lev,1,1))
-            if log: print(k, arr.shape)
+            if doLog: 
+                print('accessTimeData', k, arr.shape)
             inputs += [arr]
         if self.config.convo:
             inX = np.stack(inputs, axis=0)
         else: # make a soup of numbers
-            inX = np.concatenate(inputs, axis=-1)
+            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
+        if doLog: 
+            print('accessTimeData', inX.shape)
         return inX
 
-    def prepareData(self, fileReader, iTim):
-        samp = self.accessTimeData(fileReader, self.varAllList, iTim)
+    def prepareData(self, fileReader, iTim, doLog=False):
+        samp = self.accessTimeData(fileReader, self.varAllList, iTim, doLog)
         return np.split(samp, [self.varNameSplit])
 
     def sampleTrain(self, ithFileReader):
@@ -228,7 +211,7 @@ class DataLoader:
         return threads
 
     def recordFileName(self, filename):
-        return filename + '.tfrecords' # address to save the TFRecords file into
+        return filename + ('_c' if self.config.convo else '_f') + '.tfrecords' # address to save the TFRecords file into
 
     def makeTfRecordsDate(self, date):
         def _bytes_feature(value):

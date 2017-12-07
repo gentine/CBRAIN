@@ -78,7 +78,7 @@ class Trainer(object):
             self.visuarrs += tf.unstack(Yhb1c, axis=-1)
             self.visuarrs += tf.unstack(Phb1c, axis=-1)
             self.visuarrs += tf.unstack(Lhb1c, axis=-1)
-            self.visuarrs += [self.frameWorld]
+            #self.visuarrs += [self.frameWorld]
             print("self.frameWorld", self.frameWorld.shape)
         except:
             pass
@@ -117,7 +117,7 @@ class Trainer(object):
             pass
         totStep = 0
         for ep in range(1, self.config.epoch + 1):
-            trainBar = trange(self.start_step, self.data_loader.NumBatchTrain)
+            trainBar = trange(self.start_step, self.data_loader.NumBatch)
             #for i in range(70): self.sess.run(self.visuarrs)
             for step in trainBar:
                 totStep += 1
@@ -190,8 +190,8 @@ class Trainer(object):
                 loss = result['loss']
                 logloss = result['logloss']
                 R2 = result['R2']
-                trainBar.set_description("q:{}, L:{:.6f}, logL:{:.6f}, R2:{:+.3f}". \
-                    format(self.data_loader.size_op.eval(session=self.sess), loss, logloss, R2))
+                trainBar.set_description("L:{:.6f}, logL:{:.6f}, R2:{:+.3f}". \
+                    format(loss, logloss, R2))
             time.sleep(sleepTime)
         exit(0)
 
@@ -230,8 +230,7 @@ class Trainer(object):
             x = LeakyReLU()(x)
         print('x:', x)
         x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
-        print('x:', x)
-
+        print('self.pred:', x)
         self.pred = x#tf.reshape(x, self.y.get_shape())
 
     def build_trainop(self):
