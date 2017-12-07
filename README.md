@@ -1,4 +1,7 @@
 # CBRAIN
+
+rename the `folderDefs_example.py` file by removing "_example" and adjust with your path. (do not commit the resulting `folderDefs.py` as it is specific to your system and should not be propagated to mine...)
+
 To create the tf records, run eg:
 ```
 python ./dataLoad.py --input_names=TAP,QAP,,SHFLX,LHFLX,PS' --output_names=SPDT,SPDQ --convert_units=true --convo=true
