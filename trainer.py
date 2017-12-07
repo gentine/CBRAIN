@@ -198,21 +198,21 @@ class Trainer(object):
     def build_model(self):
         x = self.x
         print('x:', x)
+        numChanOut = self.y.get_shape().as_list()[1]
 
-        net = tf.contrib.layers.flatten(x)
-        print('net', net)
-        nLayPrev = self.data_loader.n_input
-        iLay = 0
+        x = Flatten()(x)
         for nLay in self.config.hidden.split(','):
-            iLay += 1
             nLay = int(nLay)
-            if(self.act==0): # differnt types of activation functions
-                net = nn_layer(net, nLayPrev, nLay, self.keep_dropout_rate, 'layer'+str(iLay),act=tf.nn.relu)
-            else:
-                net = nn_layer(net, nLayPrev, nLay, self.keep_dropout_rate, 'layer'+str(iLay),act=tf.nn.sigmoid)
-            nLayPrev = nLay
-
-        self.pred = nn_layer(net, nLayPrev, self.data_loader.n_output, 1., 'layerout', act=tf.identity)
+            print('x:', x)
+            x = Dense(nLay, activation=self.config.act)(x)
+#            if(self.act==0): # differnt types of activation functions
+#                net = nn_layer(net, nLayPrev, nLay, self.keep_dropout_rate, 'layer'+str(iLay),act=tf.nn.relu)
+#            else:
+#                net = nn_layer(net, nLayPrev, nLay, self.keep_dropout_rate, 'layer'+str(iLay),act=tf.nn.sigmoid)
+        x = tf.stack([tf.stack([x], axis=-1)], axis=-1)
+        x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
+        print('self.pred:', x)
+        self.pred = x#tf.reshape(x, self.y.get_shape())
 
     def build_model_convo(self):
         x = self.x
