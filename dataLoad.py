@@ -16,6 +16,8 @@ class DataLoader:
     def __init__(self, folderPath, config, rawFileBase=''):
         self.config = config
         self.nSampleFetching = 1024
+        self.exists_TPHYSTND_SPDT = False
+        self.exists_PHQ_SPDQ = False
         self.fileReader = []
         self.lock = threading.Lock()
         self.inputNames = self.config.input_names.split(',')
@@ -104,7 +106,7 @@ class DataLoader:
             return arr*1000
         if varname == "SPDQ":
             return arr*2.5e6
-        return arr
+        return arr 
 
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
@@ -119,9 +121,22 @@ class DataLoader:
             if self.config.convo:
                 if arr.shape[0] == 1:
                     arr = np.tile(arr, (self.n_lev,1,1))
-            if doLog: 
+            if doLog:  
                 print('accessTimeData', k, arr.shape)
             inputs += [arr]
+        # diabatic heating and moistenting tendencies 
+        if 'SPDT' in names:
+            if 'TPHYSTND' in names:
+                # tendency due to everything but convection
+                arr = fileReader['TPHYSTND'][iTim]  - fileReader['SPDT'][iTim] 
+                inputs += [arr]
+                self.exists_TPHYSTND_SPDT = True
+        if 'SPDQ' in names:
+            if 'PHQ' in names:
+                # tendency due to everything but convection
+                arr = fileReader['PHQ'][iTim]  - fileReader['SPDQ'][iTim]  
+                inputs += [arr]
+                self.exists_PHQ_SPDQ = True
         if self.config.convo:
             inX = np.stack(inputs, axis=0)
         else: # make a soup of numbers
@@ -131,8 +146,16 @@ class DataLoader:
         return inX
 
     def prepareData(self, fileReader, iTim, doLog=False):
-        samp = self.accessTimeData(fileReader, self.varAllList, iTim, doLog)
-        return np.split(samp, [self.varNameSplit])
+        varAllList      = self.varAllList
+        varNameSplit    = self.varNameSplit
+        samp = self.accessTimeData(fileReader, varAllList, iTim, doLog)
+        if self.exists_TPHYSTND_SPDT:
+            varAllList += ['dTdt_adiabatic'] # PG not used for now, should be only for sample
+            varNameSplit +=1
+        if self.exists_PHQ_SPDQ:
+            varAllList += ['dQdt_adiabatic'] # PG not used for now, should be only for sample
+            varNameSplit +=1
+        return np.split(samp, [varNameSplit])
 
     def get_inputs(self):
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
