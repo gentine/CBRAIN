@@ -4,7 +4,7 @@ rename the `folderDefs_example.py` file by removing "_example" and adjust with y
 
 To create the tf records, run eg:
 ```
-python ./dataLoad.py --input_names=TAP,QAP,,SHFLX,LHFLX,PS' --output_names=SPDT,SPDQ --convert_units=true --convo=true
+python ./dataLoad.py --input_names='TAP,QAP,SHFLX,LHFLX,PS' --output_names='SPDT,SPDQ' --convert_units=true --convo=true
 ```
 
 
