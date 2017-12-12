@@ -67,8 +67,8 @@ class Trainer(object):
 
 
         self.visuarrs = []
-        x0 = self.x[:,0]
-        self.frameWorld = tf.reshape(tf.reduce_mean(x0, axis=1), [self.data_loader.n_lat, -1])
+        y0 = self.y[:,:1]
+        self.frameWorld = tf.log(1+tf.reshape(tf.reduce_mean(y0, axis=2), [self.data_loader.n_lat, -1]))
         try:
             maxWidth = self.data_loader.n_lon
             Xhb1c = tf.transpose(self.x[:maxWidth,:,::-1,0], [2,0,1])
@@ -79,7 +79,8 @@ class Trainer(object):
             self.visuarrs += tf.unstack(Yhb1c, axis=-1)
             self.visuarrs += tf.unstack(Phb1c, axis=-1)
             self.visuarrs += tf.unstack(Lhb1c, axis=-1)
-            #self.visuarrs += [self.frameWorld]
+            self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,0], axis=1), [self.data_loader.n_lat, -1])]
+            self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,1], axis=1), [self.data_loader.n_lat, -1])]
             print("self.frameWorld", self.frameWorld.shape)
         except:
             pass
@@ -124,7 +125,10 @@ class Trainer(object):
                 totStep += 1
                 fetch_dict = {"optim": self.optim,
                         "visuarrs": self.visuarrs,
-                        "frameWorld": self.frameWorld}
+                        "frameWorld": self.frameWorld,
+                        "x": self.x,
+                        "y": self.y
+                        }
                 if step % self.log_step == 0:
                     fetch_dict.update({
                         "summary": self.summary_op,
@@ -133,6 +137,8 @@ class Trainer(object):
                         "R2": self.R2
                     })
                 result = self.sess.run(fetch_dict)
+                #print('x',np.mean(result['x'], axis=0))
+                #print('y',np.mean(result['y'], axis=0))
 
                 if step % self.log_step == 0:
                     self.summary_writer.add_summary(result['summary'], totStep)
@@ -288,9 +294,7 @@ class Trainer(object):
 
             optimizer = optimizer(self.lr)
 
-            slim.losses.add_loss(self.loss) # use log loss instead
-            total_loss = slim.losses.get_total_loss()
-            train_op = slim.learning.create_train_op(total_loss, optimizer, global_step=self.step)#optimizer.minimize(self.loss)
+            train_op = optimizer.minimize(self.loss, global_step=self.step)
             
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
