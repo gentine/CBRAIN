@@ -237,7 +237,7 @@ class DataLoader:
             # Shuffle the examples and collect them into batch_size batches.
             # (Internally uses a RandomShuffleQueue.)
             # We run this in two threads to avoid being a bottleneck.
-            self.capacityTrain = batch_size * 128
+            self.capacityTrain = 8192 * 128
             if self.config.randomize:
                 b_X, b_Y = tf.train.shuffle_batch([X, Y], batch_size=batch_size, num_threads=2,
                                                     enqueue_many=True,
