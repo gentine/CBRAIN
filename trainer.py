@@ -16,6 +16,7 @@ except:
 	pass
 
 from models import *
+from climatLosses import *
 
 def signLog(a, linearRegion=1):
     a /= linearRegion
@@ -69,21 +70,23 @@ class Trainer(object):
         self.visuarrs = []
         y0 = self.y[:,:1]
         self.frameWorld = tf.log(1+tf.reshape(tf.reduce_mean(y0, axis=2), [self.data_loader.n_lat, -1]))
-        try:
+        with tf.name_scope('visuarrs'):
             maxWidth = self.data_loader.n_lon
-            Xhb1c = tf.transpose(self.x[:maxWidth,:,::-1,0], [2,0,1])
-            Yhb1c = tf.transpose(self.y[:maxWidth,:,::-1,0], [2,0,1])
-            Phb1c = tf.transpose(self.pred[:maxWidth,:,::-1,0], [2,0,1])
-            Lhb1c = tf.transpose(self.losses[:maxWidth,:,::-1,0], [2,0,1])
+            Xhb1c = tf.transpose(self.x[:maxWidth,:,:,0], [2,0,1])
+            Yhb1c = tf.transpose(self.y[:maxWidth,:,:,0], [2,0,1])
+            Phb1c = tf.transpose(self.pred[:maxWidth,:,:,0], [2,0,1])
+            #Lhb1c = tf.transpose(self.losses['loss'][:maxWidth,:,:], [2,0,1])
             self.visuarrs += tf.unstack(Xhb1c, axis=-1)
             self.visuarrs += tf.unstack(Yhb1c, axis=-1)
             self.visuarrs += tf.unstack(Phb1c, axis=-1)
-            self.visuarrs += tf.unstack(Lhb1c, axis=-1)
+            #self.visuarrs += tf.unstack(Lhb1c, axis=-1)
             self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,0], axis=1), [self.data_loader.n_lat, -1])]
+            self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,0], axis=1), [self.data_loader.n_lat, -1])]
             self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,1], axis=1), [self.data_loader.n_lat, -1])]
+            self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,1], axis=1), [self.data_loader.n_lat, -1])]
             print("self.frameWorld", self.frameWorld.shape)
-        except:
-            pass
+            for op in self.visuarrs:
+                print('self.visuarrs', op)
 
         self.valStr = '' if config.is_train else '_val'
         self.saver = tf.train.Saver()# if self.is_train else None
@@ -132,9 +135,8 @@ class Trainer(object):
                 if step % self.log_step == 0:
                     fetch_dict.update({
                         "summary": self.summary_op,
-                        "loss": self.loss,
-                        "logloss": self.logloss,
-                        "R2": self.R2
+                        "loss": self.losses['loss'],
+                        "R2": self.losses['R2']
                     })
                 result = self.sess.run(fetch_dict)
                 #print('x',np.mean(result['x'], axis=0))
@@ -145,10 +147,9 @@ class Trainer(object):
                     self.summary_writer.flush()
 
                     loss = result['loss']
-                    logloss = result['logloss']
                     R2 = result['R2']
-                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, loss, logloss, R2, 0, self.lr.eval(session=self.sess)))
+                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
+                        format(ep, loss, R2, 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
@@ -183,9 +184,8 @@ class Trainer(object):
             if True:#step % self.log_step == 0:
                 fetch_dict.update({
                     "summary": self.summary_op,
-                    "loss": self.loss,
-                    "logloss": self.logloss,
-                    "R2": self.R2,
+                    "loss": self.losses['loss'],
+                    "R2": self.losses['R2'],
                     "step": self.step
                 })
             result = self.sess.run(fetch_dict)
@@ -195,10 +195,9 @@ class Trainer(object):
                 self.summary_writer.flush()
 
                 loss = result['loss']
-                logloss = result['logloss']
                 R2 = result['R2']
-                trainBar.set_description("L:{:.6f}, logL:{:.6f}, R2:{:+.3f}". \
-                    format(loss, logloss, R2))
+                trainBar.set_description("L:{:.6f}, R2:{:+.3f}". \
+                    format(loss, R2))
             time.sleep(sleepTime)
         exit(0)
 
@@ -244,43 +243,16 @@ class Trainer(object):
         print('self.pred:', self.pred)
 
         # Add ops to save and restore all the variables.
-        with tf.name_scope('loss'):
-            if self.logloss:
-                self.losses = tf.log(tf.square(y - self.pred) + 1e-36) / tf.log(10.0)
+        self.losses = makeLossesPerLevel(self.y[:,:,:,0], self.pred[:,:,:,0], self.data_loader.outputNames)
+
+        summaries = []
+        for n,op in self.losses.items():
+            if len(op.shape) < 1:
+                summaries += [tf.summary.scalar(n, op)]
             else:
-                self.losses = tf.abs(y - self.pred)
-            print('self.losses:', self.losses)
-            self.loss = tf.reduce_mean(self.losses, name='loss')
-            print('self.loss:', self.loss)
-            
-            self.regular_loss = tf.sqrt(tf.reduce_mean(tf.losses.mean_squared_error(y, self.pred)), name='regular_loss')
-            
-            self.logloss = tf.divide(tf.log(self.regular_loss+1.e-20), tf.log(10.0), name='logloss') # add a tiny bias to avoid numerical error
-
-            total_error = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
-            unexplained_error = tf.reduce_sum(tf.square(tf.subtract(y, self.pred)))
-            self.R2  = tf.subtract(1., tf.divide(unexplained_error, total_error), name='R2')
-            print('self.R2', self.R2)
-            avgY = tf.reduce_mean(y, axis=0, keep_dims=True) # axis=0 is sample axis
-            print('avgY', avgY)
-            total_error_avgAx0 = tf.reduce_sum(tf.square(tf.subtract(y, avgY)))
-            self.R2avgAx0 = tf.subtract(1.0, tf.divide(unexplained_error, total_error_avgAx0), name='R2avgAx0')
-            print('self.R2avgAx0', self.R2avgAx0)
-
-        self.summary_op = tf.summary.merge([
-            tf.summary.histogram("x", self.x),
-            tf.summary.histogram("y", self.y),
-            tf.summary.histogram("avgY", avgY),
-            tf.summary.scalar("loss/loss", self.loss),
-            tf.summary.scalar("loss/regular_loss", self.regular_loss),
-            tf.summary.scalar("loss/logloss", self.logloss),
-            tf.summary.scalar("loss/R2", tf.nn.relu(self.R2)),
-            tf.summary.scalar("loss/R2avgAx0", tf.nn.relu(self.R2avgAx0)),
-            tf.summary.scalar("loss/error_total", total_error),
-            tf.summary.scalar("loss/total_error_avgAx0", total_error_avgAx0),
-            tf.summary.scalar("loss/error_unexplained", unexplained_error),
-            tf.summary.scalar("misc/lr", self.lr),
-        ])
+                summaries += [tf.summary.histogram(n, op)]
+        summaries += [tf.summary.scalar("misc/lr", self.lr)]
+        self.summary_op = tf.summary.merge(summaries)
 
         if self.is_train:
             if self.optimizer == 'adam':
@@ -294,7 +266,7 @@ class Trainer(object):
 
             optimizer = optimizer(self.lr)
 
-            train_op = optimizer.minimize(self.loss, global_step=self.step)
+            train_op = optimizer.minimize(self.losses['loss'], global_step=self.step)
             
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
             with tf.control_dependencies(update_ops):
