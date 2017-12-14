@@ -58,13 +58,14 @@ class Trainer(object):
         self.logloss    = config.logloss
         
         self.is_train = config.is_train
-        #with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
-        if self.config.convo:
-            self.build_model_convo()
-        else:
-            self.build_model()
+        K.set_learning_phase(config.is_train)
+        with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
+            if self.config.convo:
+                self.build_model_convo()
+            else:
+                self.build_model()
 
-        self.build_trainop()
+            self.build_trainop()
 
 
         self.visuarrs = []
@@ -110,7 +111,7 @@ class Trainer(object):
         self.sess = sv.prepare_or_wait_for_session(config=sess_config)
         # start our custom queue runner's threads
         self.coord = tf.train.Coordinator()
-        tf.train.start_queue_runners(coord=self.coord, sess=self.sess)
+        self.queueThreads = tf.train.start_queue_runners(coord=self.coord, sess=self.sess)
         # dirty way to bypass graph finilization error
         g = tf.get_default_graph()
         g._finalized = False
@@ -153,7 +154,7 @@ class Trainer(object):
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
-                            filename = self.model_dir+'saveNet/'+op.name
+                            filename = self.model_dir+'/saveNet/'+op.name
                             try:
                                 os.makedirs(os.path.dirname(filename))
                             except:
@@ -171,8 +172,10 @@ class Trainer(object):
                 #    self.sess.run(self.visuarrs)
                 #time.sleep(0.1)
 
-            if ep % self.lr_update_step == self.lr_update_step - 1:
-                    self.sess.run([self.lr_update])
+                if step % self.lr_update_step == self.lr_update_step - 1:
+                        self.sess.run([self.lr_update])
+        self.coord.request_stop()
+        self.coord.join(self.queueThreads)
 
     def validate(self):
         numSteps = 50#self.data_loader.NumBatchValid
@@ -199,6 +202,8 @@ class Trainer(object):
                 trainBar.set_description("L:{:.6f}, R2:{:+.3f}". \
                     format(loss, R2))
             time.sleep(sleepTime)
+        self.coord.request_stop()
+        self.coord.join(self.queueThreads)
         exit(0)
 
     def build_model(self):
@@ -220,7 +225,12 @@ class Trainer(object):
         x = self.x
         print('x:', x)
         numChanOut = self.y.get_shape().as_list()[1]
+        shapeX = self.x.get_shape().as_list()
 
+        x = tf.reshape(x, [-1]+[shapeX[1]*shapeX[2]])
+        #x = tf.layers.batch_normalization(x, axis=1, momentum=0.999, training=self.config.is_train)
+        x = tf.reshape(x, shapeX)
+        print('batchNorm(x):', x)
         for nLay in self.config.hidden.split(','):
             nLay = int(nLay)
             x = tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')
@@ -229,21 +239,23 @@ class Trainer(object):
                 x = LocallyConnected2D(nLay, (3,1), data_format='channels_first')(x)
             else:
                 x = Conv2D(nLay, (3,1), padding='valid', data_format='channels_first')(x)
-            x = LeakyReLU()(x)
+            x = swish(x)
         print('x:', x)
         x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
+#        x *= 1e-3
         print('self.pred:', x)
         self.pred = x#tf.reshape(x, self.y.get_shape())
 
     def build_trainop(self):
-        y = self.y
+        y = self.y*1000
+        p = self.pred
         print('y:', y)
+        print('p:', p)
         numChanOut = y.get_shape().as_list()[1]
         print('numChanOut:', numChanOut)
-        print('self.pred:', self.pred)
 
         # Add ops to save and restore all the variables.
-        self.losses = makeLossesPerLevel(self.y[:,:,:,0], self.pred[:,:,:,0], self.data_loader.outputNames)
+        self.losses = makeLossesPerLevel(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames)
 
         summaries = []
         for n,op in self.losses.items():
@@ -269,6 +281,7 @@ class Trainer(object):
             train_op = optimizer.minimize(self.losses['loss'], global_step=self.step)
             
             update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+            print('update_ops', update_ops)
             with tf.control_dependencies(update_ops):
                 self.optim = train_op
 

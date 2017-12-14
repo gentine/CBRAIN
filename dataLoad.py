@@ -47,7 +47,9 @@ class DataLoader:
             print(aqua_rg)
             for k in aqua_rg.variables.keys():
                 self.varDim[k] = len(aqua_rg[k].shape)
-                print(fn+': ', k, aqua_rg[k].shape)
+                if len(aqua_rg[k].shape) > 2:
+                    print(Fore.YELLOW)
+                print(fn+': ', k, aqua_rg[k].shape, Style.RESET_ALL)
             print('n_tim =', self.n_tim, " = ", aqua_rg.variables['time'][:3],"...",aqua_rg.variables['time'][-3:])
             print('n_lev =', self.n_lev, " = ", aqua_rg.variables['lev'][:3],"...",aqua_rg.variables['lev'][-3:])
             print('n_lat =', self.n_lat, " = ", aqua_rg.variables['lat'][:3],"...",aqua_rg.variables['lat'][-3:])

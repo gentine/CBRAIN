@@ -25,3 +25,5 @@ from keras.losses import mean_absolute_percentage_error, mean_squared_logarithmi
 
 from keras.optimizers import Adam
 
+def swish(x):
+    return x * K.sigmoid(x)
