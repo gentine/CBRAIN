@@ -26,6 +26,7 @@ def makeLossesPerLevel(y, pred, names):
             lossDict['absLossesPerLev'+'/'+outName] = tf.reduce_mean(absLosses[:,iOut,:], axis=0)
             lossDict['loglossesPerLev'+'/'+outName] = tf.reduce_mean(loglosses[:,iOut,:], axis=0)
             lossDict['meanYPerLev'+'/'+outName]     = tf.reduce_mean(batchAvgY[:,iOut,:], axis=0)
+            lossDict['meanPredPerLev'+'/'+outName]  = tf.reduce_mean(batchAvgPred[:,iOut,:], axis=0)
             lossDict['totErrPerLev'+'/'+outName]    = tf.reduce_mean(tf.square(y[:,iOut,:] - batchAvgY[:,iOut,:]), axis=0)
             lossDict['R2PerLev'+'/'+outName]        = tf.nn.relu(1 - lossDict['sqrLossesPerLev'+'/'+outName] / (lossDict['totErrPerLev'+'/'+outName] + 1e-15))
 
@@ -36,7 +37,7 @@ def makeLossesPerLevel(y, pred, names):
 
     with tf.name_scope('loss'):
         lossDict['loss'] = tf.reduce_mean(sqrLosses)
-        lossDict['R2'] = tf.nn.relu(1 - lossDict['loss'] / (tf.reduce_mean(tf.square(y[:,:,:] - batchAvgY[:,:,:])) + 1e-15))
+        lossDict['R2'] = tf.nn.relu(1 - tf.reduce_mean(sqrLosses) / (tf.reduce_mean(tf.square(y[:,:,:] - batchAvgY[:,:,:])) + 1e-15))
 
     for n in lossDict.keys():
         print(n, lossDict[n])

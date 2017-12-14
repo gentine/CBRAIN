@@ -33,11 +33,11 @@ class DataLoader:
         self.rawFiles = {}
         self.rawDates = []
         self.varDim = {}
-        for fn in  glob.glob(raw_data_train_path):
+        for fn in  sorted(glob.glob(raw_data_train_path)):
             date = fn.split('.')[-2]
             self.rawDates += [date]
             self.rawFiles[date] = fn
-        print(self.rawFiles)
+        print(self.rawDates[:3])
         print('last raw file:', fn)
         with nc.Dataset(fn, mode='r') as aqua_rg:
             self.n_tim = aqua_rg.dimensions['time'].size
@@ -78,11 +78,11 @@ class DataLoader:
         ## this deals with tf records and using them by date for training/validation
         if not self.rawFileBase:
             tfRecordsFolderName = '/'.join(self.recordFileName(trainingDataDirTFRecords+date+'/t{0:02d}').split('/')[:-1])
-            folders = glob.glob(trainingDataDirTFRecords+'*')
+            folders = sorted(glob.glob(trainingDataDirTFRecords+'*'))
             foldersSplit = int(len(folders) * self.config.frac_train + 0.5)
-            print(folders)
+            print(folders[:3], len(folders), folders[-3:])
             folders = folders[:foldersSplit] if self.config.is_train else folders[foldersSplit:]
-            print(Fore.RED, 'days', [fn.split('/')[-1] for fn in folders], Style.RESET_ALL)
+            print(Fore.RED, 'days', folders[0], '-->', folders[-1], Style.RESET_ALL)#[fn.split('/')[-1] for fn in folders], Style.RESET_ALL)
             self.tfRecordsFiles = []
             for fn in folders:
                 self.tfRecordsFiles += glob.glob(fn+"/*" + ('_c' if self.config.convo else '_f') + ".tfrecords")
@@ -237,7 +237,7 @@ class DataLoader:
             # Shuffle the examples and collect them into batch_size batches.
             # (Internally uses a RandomShuffleQueue.)
             # We run this in two threads to avoid being a bottleneck.
-            self.capacityTrain = 8192 * 128
+            self.capacityTrain = 8192 * 32
             if self.config.randomize:
                 b_X, b_Y = tf.train.shuffle_batch([X, Y], batch_size=batch_size, num_threads=2,
                                                     enqueue_many=True,
