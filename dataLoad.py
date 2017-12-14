@@ -22,7 +22,7 @@ class DataLoader:
         self.outputNames = config.output_names.split(',')
         self.varAllList = self.inputNames + self.outputNames
         print('self.varAllList', self.varAllList)
-        self.varNameSplit = len(self.inputNames)
+        self.varNameSplit = -len(self.outputNames)
         self.rawFileBase = rawFileBase
         self.reload()
 
@@ -55,8 +55,8 @@ class DataLoader:
             print('n_lat =', self.n_lat, " = ", aqua_rg.variables['lat'][:3],"...",aqua_rg.variables['lat'][-3:])
             print('n_lon =', self.n_lon, " = ", aqua_rg.variables['lon'][:3],"...",aqua_rg.variables['lon'][-3:])
             # if flattened, the split is not the index of the first output name, but the index of the first output once flattened
-            if not self.config.convo:
-                self.varNameSplit = self.accessTimeData(aqua_rg, self.inputNames, 0, doLog=True).shape[0]
+#            if not self.config.convo:
+#                self.varNameSplit = self.accessTimeData(aqua_rg, self.inputNames, 0, doLog=True).shape[0]
             print('self.varNameSplit', self.varNameSplit)
             sampX, sampY = self.prepareData(aqua_rg, 0, doLog=True)
             print('sampX =', sampX.shape)
@@ -134,6 +134,8 @@ class DataLoader:
 
     def prepareData(self, fileReader, iTim, doLog=False):
         samp = self.accessTimeData(fileReader, self.varAllList, iTim, doLog)
+        sampm1 = self.accessTimeData(fileReader, self.inputNames, iTim-1, doLog)
+        samp = np.concatenate([sampm1,samp], axis=0)
         return np.split(samp, [self.varNameSplit])
 
     def get_inputs(self):
@@ -154,7 +156,7 @@ class DataLoader:
         if not os.path.exists(folderName):
             os.makedirs(folderName)
         shards = self.n_tim
-        sampBar = tqdm(range(shards), leave=False) 
+        sampBar = tqdm(range(1, shards), leave=False) 
         with nc.Dataset(self.rawFiles[date], mode='r') as aqua_rg:
             for iTim in sampBar:
                 # open the TFRecords file
