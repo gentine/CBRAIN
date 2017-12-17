@@ -111,6 +111,10 @@ class DataLoader:
         """Make sure SPDQ and SPDT have comparable units"""
         if varname == "SPDT":
             return arr*1000
+        if varname == "QRS":
+            return arr*1000
+        if varname == "QRL":
+            return arr*1000
         if varname == "SPDQ":
             return arr*2.5e6
         return arr

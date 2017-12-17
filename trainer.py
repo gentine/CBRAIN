@@ -146,7 +146,7 @@ class Trainer(object):
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
-                            filename = self.model_dir+'saveNet/'+op.name
+                            filename = self.model_dir+'/saveNet/'+op.name
                             try:
                                 os.makedirs(os.path.dirname(filename))
                             except:
