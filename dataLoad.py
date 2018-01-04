@@ -21,6 +21,15 @@ class DataLoader:
         self.inputNames = self.config.input_names.split(',')
         self.outputNames = config.output_names.split(',')
         self.varAllList = self.inputNames + self.outputNames
+        if 'SPDT' in self.varAllList:
+            if 'TPHYSTND' in self.varAllList:
+                # tendency due to everything but convection
+                self.inputNames += ['dTdt_nonSP']
+        if 'SPDQ' in self.varAllList:
+            if 'PHQ' in self.varAllList:
+                # tendency due to everything but convection
+                self.inputNames += ['dQdt_nonSP']
+        self.varAllList = self.inputNames + self.outputNames # add new 
         print('self.varAllList', self.varAllList)
         self.varNameSplit = -len(self.outputNames)
         self.rawFileBase = rawFileBase
@@ -104,6 +113,10 @@ class DataLoader:
         """Make sure SPDQ and SPDT have comparable units"""
         if varname == "SPDT":
             return arr*1000
+        if varname == "QRS":
+            return arr*1000
+        if varname == "QRL":
+            return arr*1000
         if varname == "SPDQ":
             return arr*2.5e6
         return arr
@@ -111,12 +124,19 @@ class DataLoader:
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
         for k in names:
-            if self.varDim[k] == 4:
-                arr = fileReader[k][iTim]
-            elif self.varDim[k] == 3:
-                arr = fileReader[k][iTim][None]
-            if self.config.convert_units:
-                arr = self.convertUnits(k, arr)
+            if k =='dTdt_nonSP':
+                # tendency due to everything but convection
+                arr = fileReader['TPHYSTND'][iTim]  - fileReader['SPDT'][iTim] 
+            elif k=='dQdt_nonSP':
+                # tendency due to everything but convection
+                arr = fileReader['PHQ'][iTim]  - fileReader['SPDQ'][iTim] 
+            else:
+                if self.varDim[k] == 4:
+                    arr = fileReader[k][iTim]
+                elif self.varDim[k] == 3:
+                    arr = fileReader[k][iTim][None]
+                if self.config.convert_units:
+                    arr = self.convertUnits(k, arr)
             #print(k, arr.shape)
             if self.config.convo:
                 if arr.shape[0] == 1:
