@@ -21,14 +21,14 @@ class DataLoader:
         self.inputNames = self.config.input_names.split(',')
         self.outputNames = config.output_names.split(',')
         self.varAllList = self.inputNames + self.outputNames
-        if 'SPDT' in self.varAllList:
-            if 'TPHYSTND' in self.varAllList:
-                # tendency due to everything but convection
-                self.inputNames += ['dTdt_nonSP']
-        if 'SPDQ' in self.varAllList:
-            if 'PHQ' in self.varAllList:
-                # tendency due to everything but convection
-                self.inputNames += ['dQdt_nonSP']
+        #if 'SPDT' in self.varAllList:
+        #    if 'TPHYSTND' in self.varAllList:
+        #        # tendency due to everything but convection
+        #        self.inputNames += ['dTdt_nonSP']
+        #if 'SPDQ' in self.varAllList:
+        #    if 'PHQ' in self.varAllList:
+        #        # tendency due to everything but convection
+        #        self.inputNames += ['dQdt_nonSP']
         self.varAllList = self.inputNames + self.outputNames # add new 
         print('self.varAllList', self.varAllList)
         self.varNameSplit = len(self.inputNames)
@@ -50,7 +50,10 @@ class DataLoader:
         print('last raw file:', fn)
         with nc.Dataset(fn, mode='r') as aqua_rg:
             self.n_tim = aqua_rg.dimensions['time'].size
-            self.n_lev = aqua_rg.dimensions['lev'].size
+            if self.config.nlevs_imposed==0:
+                self.n_lev = aqua_rg.dimensions['lev'].size
+            else:
+                self.n_lev = self.config.nlevs_imposed
             self.n_lat = aqua_rg.dimensions['lat'].size
             self.n_lon = aqua_rg.dimensions['lon'].size
             print(aqua_rg)
@@ -122,19 +125,20 @@ class DataLoader:
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
         for k in names:
-            if k =='dTdt_nonSP':
-                # tendency due to everything but convection
-                arr = fileReader['TPHYSTND'][iTim]  - fileReader['SPDT'][iTim] 
-            elif k=='dQdt_nonSP':
-                # tendency due to everything but convection
-                arr = fileReader['PHQ'][iTim]  - fileReader['SPDQ'][iTim] 
-            else:
-                if self.varDim[k] == 4:
-                    arr = fileReader[k][iTim]
-                elif self.varDim[k] == 3:
-                    arr = fileReader[k][iTim][None]
-                if self.config.convert_units:
-                    arr = self.convertUnits(k, arr)
+            #if k =='dTdt_nonSP':
+            #    # tendency due to everything but convection
+            #    arr = fileReader['TPHYSTND'][iTim]  - fileReader['SPDT'][iTim] 
+            #elif k=='dQdt_nonSP':
+            #    # tendency due to everything but convection
+            #    arr = fileReader['PHQ'][iTim]  - fileReader['SPDQ'][iTim] 
+            #else:
+            if self.varDim[k] == 4:
+                arr = fileReader[k][iTim]
+                arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
+            elif self.varDim[k] == 3:
+                arr = fileReader[k][iTim][None]
+            if self.config.convert_units:
+                arr = self.convertUnits(k, arr)
             #print(k, arr.shape)
             if self.config.convo:
                 if arr.shape[0] == 1:

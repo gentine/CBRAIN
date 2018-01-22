@@ -247,10 +247,10 @@ class Trainer(object):
             self.loss = tf.reduce_mean(self.losses, name='loss')
             print('self.loss:', self.loss)
             
-            self.regular_loss = tf.sqrt(tf.reduce_mean(tf.losses.mean_squared_error(y, self.pred)), name='regular_loss')
-            
-            self.logloss = tf.divide(tf.log(self.regular_loss+1.e-20), tf.log(10.0), name='logloss') # add a tiny bias to avoid numerical error
+            self.regular_loss = tf.sqrt(tf.reduce_mean(tf.losses.mean_squared_error(y, self.pred)), name='regular_loss')    
+            self.logloss = tf.divide(tf.log(self.regular_loss+1.e-36), tf.log(10.0), name='logloss') # add a tiny bias to avoid numerical error
 
+            # check errors
             total_error = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
             unexplained_error = tf.reduce_sum(tf.square(tf.subtract(y, self.pred)))
             self.R2  = tf.subtract(1., tf.divide(unexplained_error, total_error), name='R2')

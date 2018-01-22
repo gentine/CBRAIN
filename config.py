@@ -31,6 +31,7 @@ data_arg.add_argument('--convo', type=str2bool, default=False)
 data_arg.add_argument('--localConvo', type=str2bool, default=False)
 data_arg.add_argument('--input_names', type=str, default='TBSP,QBSP,SHFLX,LHFLX,PS,TPHYSTND,PHQ', help='names of input variables')
 data_arg.add_argument('--convert_units', type=str2bool, default=True, help='flag to convert SPDT and SPDQ into units of W/kg')
+data_arg.add_argument('--nlevs_imposed', type=int, default=0, help='only use 1 to nlevs_imposed (for instance not stratosphere)')
 
 
 # Training / test parameters
