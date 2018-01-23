@@ -54,7 +54,7 @@ class Trainer(object):
         self.lr_update_step = config.lr_update_step
         self.keep_dropout_rate = config.keep_dropout_rate
         self.act        = config.act
-        self.logloss    = config.logloss
+        self.lossfct    = config.lossfct
         
         self.is_train = config.is_train
         #with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
@@ -130,6 +130,7 @@ class Trainer(object):
                         "summary": self.summary_op,
                         "loss": self.loss,
                         "logloss": self.logloss,
+                        "RMSE": self.RMSE,
                         "R2": self.R2
                     })
                 result = self.sess.run(fetch_dict)
@@ -140,9 +141,10 @@ class Trainer(object):
 
                     loss = result['loss']
                     logloss = result['logloss']
+                    RMSE = result['RMSE']
                     R2 = result['R2']
-                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, loss, logloss, R2, 0, self.lr.eval(session=self.sess)))
+                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
+                        format(ep, loss, logloss, RMSE, R2, 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
@@ -179,6 +181,7 @@ class Trainer(object):
                     "summary": self.summary_op,
                     "loss": self.loss,
                     "logloss": self.logloss,
+                    "RMSE": self.RMSE,
                     "R2": self.R2,
                     "step": self.step
                 })
@@ -190,8 +193,9 @@ class Trainer(object):
 
                 loss = result['loss']
                 logloss = result['logloss']
+                RMSE = result['RMSE']
                 R2 = result['R2']
-                trainBar.set_description("L:{:.6f}, logL:{:.6f}, R2:{:+.3f}". \
+                trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, R2:{:+.3f}". \
                     format(loss, logloss, R2))
             time.sleep(sleepTime)
         exit(0)
@@ -239,39 +243,43 @@ class Trainer(object):
 
         # Add ops to save and restore all the variables.
         with tf.name_scope('loss'):
-            if self.logloss:
-                self.losses = tf.log(tf.square(y - self.pred) + 1e-36) / tf.log(10.0)
-            else:
-                self.losses = tf.abs(y - self.pred)
-            print('self.losses:', self.losses)
-            self.loss = tf.reduce_mean(self.losses, name='loss')
-            print('self.loss:', self.loss)
             
-            self.regular_loss = tf.sqrt(tf.reduce_mean(tf.losses.mean_squared_error(y, self.pred)), name='regular_loss')    
-            self.logloss = tf.divide(tf.log(self.regular_loss+1.e-36), tf.log(10.0), name='logloss') # add a tiny bias to avoid numerical error
-
-            # check errors
-            total_error = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
+            
+            
+            
+            # a few cost fucnction
+            self.RMSE       = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(y, self.pred))), name='RMSE')    
+            total_error     = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
             unexplained_error = tf.reduce_sum(tf.square(tf.subtract(y, self.pred)))
-            self.R2  = tf.subtract(1., tf.divide(unexplained_error, total_error), name='R2')
+            self.R2         = tf.subtract(1., tf.divide(unexplained_error, total_error), name='R2')
+            self.logloss    = tf.reduce_mean(0.5*tf.log(tf.square(tf.subtract(y, self.pred))), name='logloss') 
             print('self.R2', self.R2)
+            
+            # choose cost function
+            if self.lossfct=="logloss":
+                self.losses = tf.reduce_mean(0.5*tf.log(tf.square(tf.subtract(y, self.pred)))) #self.logloss
+            elif self.lossfct=="abs":
+                self.losses = tf.reduce_mean(tf.abs(y - self.pred))
+            elif self.lossfct=="Rsquared":
+                self.losses = -self.R2 
+            else:
+                self.loss = self.RMSE
+            self.loss = tf.identity(self.losses, name="loss")
+            print('self.loss:', self.loss)
+
             avgY = tf.reduce_mean(y, axis=0, keep_dims=True) # axis=0 is sample axis
             print('avgY', avgY)
-            total_error_avgAx0 = tf.reduce_sum(tf.square(tf.subtract(y, avgY)))
-            self.R2avgAx0 = tf.subtract(1.0, tf.divide(unexplained_error, total_error_avgAx0), name='R2avgAx0')
-            print('self.R2avgAx0', self.R2avgAx0)
 
         self.summary_op = tf.summary.merge([
             tf.summary.histogram("x", self.x),
             tf.summary.histogram("y", self.y),
             tf.summary.histogram("avgY", avgY),
             tf.summary.scalar("loss/loss", self.loss),
-            tf.summary.scalar("loss/regular_loss", self.regular_loss),
+            tf.summary.scalar("loss/RMSE", self.RMSE),
             tf.summary.scalar("loss/logloss", self.logloss),
-            tf.summary.scalar("loss/R2", tf.nn.relu(self.R2)),
-            tf.summary.scalar("loss/R2avgAx0", tf.nn.relu(self.R2avgAx0)),
+            tf.summary.scalar("loss/R2", self.R2),
+            tf.summary.scalar("loss/R2positive", tf.nn.relu(self.R2)),
             tf.summary.scalar("loss/error_total", total_error),
-            tf.summary.scalar("loss/total_error_avgAx0", total_error_avgAx0),
             tf.summary.scalar("loss/error_unexplained", unexplained_error),
             tf.summary.scalar("misc/lr", self.lr),
         ])
