@@ -137,6 +137,11 @@ class DataLoader:
                 arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
             elif self.varDim[k] == 3:
                 arr = fileReader[k][iTim][None]
+            elif self.varDim[k] == 2:
+                arr = fileReader[k][None] 
+            elif self.varDim[k] == 1: # latitude only
+                arr = fileReader[k]
+                arr = np.swapaxes(np.tile(arr, (1,self.n_lon,1)),1,2)# repeat lat to trasnform into matrix
             if self.config.convert_units:
                 arr = self.convertUnits(k, arr)
             #print(k, arr.shape)
