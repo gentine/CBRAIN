@@ -252,7 +252,7 @@ class Trainer(object):
             total_error     = tf.reduce_sum(tf.square(tf.subtract(y, tf.reduce_mean(y))))
             unexplained_error = tf.reduce_sum(tf.square(tf.subtract(y, self.pred)))
             self.R2         = tf.subtract(1., tf.divide(unexplained_error, total_error), name='R2')
-            self.logloss    = tf.reduce_mean(0.5*tf.log(tf.square(tf.subtract(y, self.pred))), name='logloss') 
+            self.logloss    = tf.reduce_mean(0.5*tf.log(tf.square(tf.subtract(y, self.pred))+1e-30), name='logloss') 
             print('self.R2', self.R2)
             
             # choose cost function
@@ -263,7 +263,7 @@ class Trainer(object):
             elif self.lossfct=="Rsquared":
                 self.losses = -self.R2 
             else:
-                self.loss = self.RMSE
+                self.losses = self.RMSE
             self.loss = tf.identity(self.losses, name="loss")
             print('self.loss:', self.loss)
 
