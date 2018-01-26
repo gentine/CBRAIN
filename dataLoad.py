@@ -112,16 +112,10 @@ class DataLoader:
 
     def convertUnits(self, varname, arr):
         """Make sure SPDQ and SPDT have comparable units"""
-        if varname == "SPDT":
-            return arr*1000
-        if varname == "QRS":
-            return arr*1000
-        if varname == "QRL":
-            return arr*1000
-        if varname == "SPDQ":
-            return arr*2.5e6
+        if varname == "SPDQ" or varname == "PHQ":
+            return arr*2.5e6/1000.
         return arr
-
+ 
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
         for k in names:
@@ -132,7 +126,7 @@ class DataLoader:
             #    # tendency due to everything but convection
             #    arr = fileReader['PHQ'][iTim]  - fileReader['SPDQ'][iTim] 
             #else:
-            if self.varDim[k] == 4:
+            if self.varDim[k] == 4: 
                 arr = fileReader[k][iTim]
                 arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
             elif self.varDim[k] == 3:
@@ -140,8 +134,10 @@ class DataLoader:
             elif self.varDim[k] == 2:
                 arr = fileReader[k][None] 
             elif self.varDim[k] == 1: # latitude only
+                # need to transform in single as latitude is in double
                 arr = fileReader[k]
                 arr = np.swapaxes(np.tile(arr, (1,self.n_lon,1)),1,2)# repeat lat to trasnform into matrix
+                arr = arr.astype('float32') # impose float 32 like other varaiables
             if self.config.convert_units:
                 arr = self.convertUnits(k, arr)
             #print(k, arr.shape)

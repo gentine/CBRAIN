@@ -19,7 +19,7 @@ from models import *
 
 def signLog(a, linearRegion=1):
     a /= linearRegion
-    return tf.asinh(a/2)/tf.log(10.0)
+    return tf.asinh(a/2)/np.log(10.0)
     return (tf.log(tf.nn.relu(a)+1) - tf.log(tf.nn.relu(-a)+1)) / np.log(10.0)
 
 class Trainer(object):
@@ -143,8 +143,8 @@ class Trainer(object):
                     logloss = result['logloss']
                     RMSE = result['RMSE']
                     R2 = result['R2']
-                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, loss, logloss, RMSE, R2, 0, self.lr.eval(session=self.sess)))
+                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
+                        format(ep, loss, logloss, RMSE, np.log(RMSE)/np.log(10.), R2, 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
@@ -195,8 +195,8 @@ class Trainer(object):
                 logloss = result['logloss']
                 RMSE = result['RMSE']
                 R2 = result['R2']
-                trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, R2:{:+.3f}". \
-                    format(loss, logloss, R2))
+                trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}". \
+                    format(loss, logloss, RMSE, np.log(RMSE)/np.log(10.),R2))
             time.sleep(sleepTime)
         exit(0)
 
