@@ -20,7 +20,7 @@ from climatLosses import *
 
 def signLog(a, linearRegion=1):
     a /= linearRegion
-    return tf.asinh(a/2)/tf.log(10.0)
+    return tf.asinh(a/2)/np.log(10.0)
     return (tf.log(tf.nn.relu(a)+1) - tf.log(tf.nn.relu(-a)+1)) / np.log(10.0)
 
 class Trainer(object):
@@ -55,7 +55,7 @@ class Trainer(object):
         self.lr_update_step = config.lr_update_step
         self.keep_dropout_rate = config.keep_dropout_rate
         self.act        = config.act
-        self.logloss    = config.logloss
+        self.lossfct    = config.lossfct
         
         self.is_train = config.is_train
         K.set_learning_phase(config.is_train)
@@ -149,8 +149,8 @@ class Trainer(object):
 
                     loss = result['loss']
                     R2 = result['R2']
-                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, loss, R2, 0, self.lr.eval(session=self.sess)))
+                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
+                        format(ep, loss, logloss, RMSE, np.log(RMSE)/np.log(10.), R2, 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
@@ -198,9 +198,11 @@ class Trainer(object):
                 self.summary_writer.flush()
 
                 loss = result['loss']
+                logloss = result['logloss']
+                RMSE = result['RMSE']
                 R2 = result['R2']
-                trainBar.set_description("L:{:.6f}, R2:{:+.3f}". \
-                    format(loss, R2))
+                trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}". \
+                    format(loss, logloss, RMSE, np.log(RMSE)/np.log(10.),R2))
             time.sleep(sleepTime)
         self.coord.request_stop()
         self.coord.join(self.queueThreads)
