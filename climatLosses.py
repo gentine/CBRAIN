@@ -4,7 +4,7 @@ import tensorflow as tf
 import keras.backend as K
 
 
-def makeLossesPerLevel(y, pred, names):
+def makeLossesPerLevel(y, pred, names, lossfct):
     print('makeLossesPerLevel')
     print('y:', y)
     print('pred:', pred)
@@ -36,8 +36,24 @@ def makeLossesPerLevel(y, pred, names):
             lossDict[n.replace('PerLev', 'AvgLev')] = tf.reduce_mean(lossDict[n], axis=-1)
 
     with tf.name_scope('loss'):
-        lossDict['loss'] = tf.reduce_mean(sqrLosses)
+        lossDict['RMSE'] = tf.sqrt(tf.reduce_mean(sqrLosses))
+        lossDict['mse'] = tf.reduce_mean(sqrLosses)
+        lossDict['logloss'] = tf.reduce_mean(loglosses)
+        lossDict['absloss'] = tf.reduce_mean(absLosses)
         lossDict['R2'] = tf.nn.relu(1 - tf.reduce_mean(sqrLosses) / (tf.reduce_mean(tf.square(y[:,:,:] - batchAvgY[:,:,:])) + 1e-15))
+
+        # choose cost function
+        if lossfct=="logloss":
+            lossDict['loss'] = lossDict[lossfct]
+        if lossfct=="abs":
+            lossDict['loss'] = lossDict['absloss']
+        if lossfct=="Rsquared":
+            lossDict['loss'] = -lossDict['R2']
+        if lossfct=="mse":
+            lossDict['loss'] = lossDict['mse']
+        if lossfct=="RMSE":
+            lossDict['loss'] = lossDict['RMSE']
+        lossDict['loss'] = tf.identity(lossDict['loss'], name="loss")
 
     for n in lossDict.keys():
         print(n, lossDict[n])

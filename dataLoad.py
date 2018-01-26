@@ -29,7 +29,6 @@ class DataLoader:
         #    if 'PHQ' in self.varAllList:
         #        # tendency due to everything but convection
         #        self.inputNames += ['dQdt_nonSP']
-        self.varAllList = self.inputNames + self.outputNames # add new 
         print('self.varAllList', self.varAllList)
         self.varNameSplit = -len(self.outputNames)
         self.rawFileBase = rawFileBase
@@ -154,7 +153,7 @@ class DataLoader:
         else: # make a soup of numbers
             inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
         if doLog: 
-            print('accessTimeData', inX.shape)
+            print('accessTimeData ', names, inX.shape)
         return inX
 
     def prepareData(self, fileReader, iTim, doLog=False):

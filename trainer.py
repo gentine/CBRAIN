@@ -136,7 +136,7 @@ class Trainer(object):
                 if step % self.log_step == 0:
                     fetch_dict.update({
                         "summary": self.summary_op,
-                        "loss": self.losses['loss'],
+                        "losses": self.losses,
                         "R2": self.losses['R2']
                     })
                 result = self.sess.run(fetch_dict)
@@ -147,10 +147,10 @@ class Trainer(object):
                     self.summary_writer.add_summary(result['summary'], totStep)
                     self.summary_writer.flush()
 
-                    loss = result['loss']
+                    losses = result['losses']
                     R2 = result['R2']
                     trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, loss, logloss, RMSE, np.log(RMSE)/np.log(10.), R2, 0, self.lr.eval(session=self.sess)))
+                        format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), R2, 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
@@ -187,7 +187,7 @@ class Trainer(object):
             if True:#step % self.log_step == 0:
                 fetch_dict.update({
                     "summary": self.summary_op,
-                    "loss": self.losses['loss'],
+                    "losses": self.losses,
                     "R2": self.losses['R2'],
                     "step": self.step
                 })
@@ -197,12 +197,10 @@ class Trainer(object):
                 self.summary_writer.add_summary(result['summary'], result['step'] + step)
                 self.summary_writer.flush()
 
-                loss = result['loss']
-                logloss = result['logloss']
-                RMSE = result['RMSE']
+                losses = result['losses']
                 R2 = result['R2']
                 trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}". \
-                    format(loss, logloss, RMSE, np.log(RMSE)/np.log(10.),R2))
+                    format(losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.),R2))
             time.sleep(sleepTime)
         self.coord.request_stop()
         self.coord.join(self.queueThreads)
@@ -241,7 +239,7 @@ class Trainer(object):
                 x = LocallyConnected2D(nLay, (3,1), data_format='channels_first')(x)
             else:
                 x = Conv2D(nLay, (3,1), padding='valid', data_format='channels_first')(x)
-            x = swish(x)
+            x = LeakyReLU()(x)
         print('x:', x)
         x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
 #        x *= 1e-3
@@ -257,7 +255,7 @@ class Trainer(object):
         print('numChanOut:', numChanOut)
 
         # Add ops to save and restore all the variables.
-        self.losses = makeLossesPerLevel(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames)
+        self.losses = makeLossesPerLevel(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.lossfct)
 
         summaries = []
         for n,op in self.losses.items():
