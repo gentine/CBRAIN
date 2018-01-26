@@ -137,7 +137,6 @@ class Trainer(object):
                     fetch_dict.update({
                         "summary": self.summary_op,
                         "losses": self.losses,
-                        "R2": self.losses['R2']
                     })
                 result = self.sess.run(fetch_dict)
                 #print('x',np.mean(result['x'], axis=0))
@@ -148,9 +147,8 @@ class Trainer(object):
                     self.summary_writer.flush()
 
                     losses = result['losses']
-                    R2 = result['R2']
                     trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), R2, 0, self.lr.eval(session=self.sess)))
+                        format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), losses['R2'], 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
@@ -188,7 +186,6 @@ class Trainer(object):
                 fetch_dict.update({
                     "summary": self.summary_op,
                     "losses": self.losses,
-                    "R2": self.losses['R2'],
                     "step": self.step
                 })
             result = self.sess.run(fetch_dict)
@@ -198,9 +195,8 @@ class Trainer(object):
                 self.summary_writer.flush()
 
                 losses = result['losses']
-                R2 = result['R2']
                 trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}". \
-                    format(losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.),R2))
+                    format(losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.),losses['R2']))
             time.sleep(sleepTime)
         self.coord.request_stop()
         self.coord.join(self.queueThreads)
