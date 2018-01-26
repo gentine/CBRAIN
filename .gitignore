@@ -4,3 +4,13 @@
 /folderDefs.py
 /logs/
 /.DS_Store
+/_logs/
+/data/
+/yellowfin.py
+/config.pyc
+/dataLoad.pyc
+/folderDefs.pyc
+/models.pyc
+/trainer.pyc
+/utils.pyc
+/saveNet/
