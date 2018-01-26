@@ -256,7 +256,7 @@ class Trainer(object):
         summaries = []
         for n,op in self.losses.items():
             if len(op.shape) < 1:
-                summaries += [tf.summary.scalar(n, op)]
+                summaries += [tf.summary.scalar('losses/'+n, op)]
             else:
                 summaries += [tf.summary.histogram(n, op)]
         summaries += [tf.summary.scalar("misc/lr", self.lr)]
