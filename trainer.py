@@ -32,10 +32,6 @@ class Trainer(object):
         print('self.x', self.x)
         print('self.y', self.y)
 
-        self.optimizer  = config.optimizer
-        self.batch_size = config.batch_size
-        self.hidden     = config.hidden
-
         self.step = tf.Variable(0, name='step', trainable=False)
 
         self.lr = tf.Variable(config.lr, name='lr', trainable=False)
@@ -47,17 +43,8 @@ class Trainer(object):
         self.use_gpu = config.use_gpu
         self.data_format = config.data_format
 
-        #_, height, width, self.channel = get_conv_shape(self.data_loader, self.data_format)
         self.start_step = 0
-        self.log_step = config.log_step
-        self.max_step = config.max_step
-        self.save_step = config.save_step
-        self.lr_update_step = config.lr_update_step
-        self.keep_dropout_rate = config.keep_dropout_rate
-        self.act        = config.act
-        self.lossfct    = config.lossfct
-        
-        self.is_train = config.is_train
+
         K.set_learning_phase(config.is_train)
         with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
             if self.config.convo:
@@ -90,7 +77,7 @@ class Trainer(object):
                 print('self.visuarrs', op)
 
         self.valStr = '' if config.is_train else '_val'
-        self.saver = tf.train.Saver()# if self.is_train else None
+        self.saver = tf.train.Saver()# if self.config.is_train else None
         self.sumdir = self.model_dir + self.valStr
         self.summary_writer = tf.summary.FileWriter(self.sumdir)
 
@@ -100,7 +87,7 @@ class Trainer(object):
                                 saver=self.saver,
                                 summary_op=None,
                                 summary_writer=self.summary_writer,
-                                save_model_secs=self.saveEverySec if self.is_train else 0,
+                                save_model_secs=self.saveEverySec if self.config.is_train else 0,
                                 global_step=self.step,
                                 ready_for_local_init_op=None)
 
@@ -133,7 +120,7 @@ class Trainer(object):
                         "x": self.x,
                         "y": self.y
                         }
-                if step % self.log_step == 0:
+                if step % self.config.log_step == 0:
                     fetch_dict.update({
                         "summary": self.summary_op,
                         "losses": self.losses,
@@ -142,7 +129,7 @@ class Trainer(object):
                 #print('x',np.mean(result['x'], axis=0))
                 #print('y',np.mean(result['y'], axis=0))
 
-                if step % self.log_step == 0:
+                if step % self.config.log_step == 0:
                     self.summary_writer.add_summary(result['summary'], totStep)
                     self.summary_writer.flush()
 
@@ -169,9 +156,11 @@ class Trainer(object):
                 #if step % 100 == 0:
                 #    self.sess.run(self.visuarrs)
                 #time.sleep(0.1)
-
-                if step % self.lr_update_step == self.lr_update_step - 1:
+                if step % self.config.lr_update_step == self.config.lr_update_step - 1:
                         self.sess.run([self.lr_update])
+
+            if ep % self.config.lr_update_epoch == self.config.lr_update_epoch - 1:
+                    self.sess.run([self.lr_update])
         self.coord.request_stop()
         self.coord.join(self.queueThreads)
 
@@ -182,7 +171,7 @@ class Trainer(object):
         print('sleepTime', sleepTime)
         for step in trainBar:
             fetch_dict = {} # does not train
-            if True:#step % self.log_step == 0:
+            if True:#step % self.config.log_step == 0:
                 fetch_dict.update({
                     "summary": self.summary_op,
                     "losses": self.losses,
@@ -190,7 +179,7 @@ class Trainer(object):
                 })
             result = self.sess.run(fetch_dict)
 
-            if True:#step % self.log_step == 0:
+            if True:#step % self.config.log_step == 0:
                 self.summary_writer.add_summary(result['summary'], result['step'] + step)
                 self.summary_writer.flush()
 
@@ -251,23 +240,23 @@ class Trainer(object):
         print('numChanOut:', numChanOut)
 
         # Add ops to save and restore all the variables.
-        self.losses = makeLossesPerLevel(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.lossfct)
+        self.losses = makeLossesPerLevel(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.config.lossfct)
 
         summaries = []
         for n,op in self.losses.items():
             if len(op.shape) < 1:
-                summaries += [tf.summary.scalar(n, op)]
+                summaries += [tf.summary.scalar(op.name, op)]
             else:
                 summaries += [tf.summary.histogram(n, op)]
         summaries += [tf.summary.scalar("misc/lr", self.lr)]
         self.summary_op = tf.summary.merge(summaries)
 
-        if self.is_train:
-            if self.optimizer == 'adam':
+        if self.config.is_train:
+            if self.config.optimizer == 'adam':
                 optimizer = tf.train.AdamOptimizer
-            elif self.optimizer == 'sgd':
+            elif self.config.optimizer == 'sgd':
                 optimizer = tf.train.GradientDescentOptimizer
-            elif self.optimizer == 'yf':
+            elif self.config.optimizer == 'yf':
                 optimizer = YFOptimizer
             else:
                 raise Exception("[!] Caution! Paper didn't use {} opimizer other than Adam".format(config.optimizer))
