@@ -52,7 +52,7 @@ class Trainer(object):
         self.log_step = config.log_step
         self.max_step = config.max_step
         self.save_step = config.save_step
-        self.lr_update_step = config.lr_update_step
+        self.lr_update_epoch = config.lr_update_epoch
         self.keep_dropout_rate = config.keep_dropout_rate
         self.act        = config.act
         self.lossfct    = config.lossfct
@@ -170,8 +170,8 @@ class Trainer(object):
                 #    self.sess.run(self.visuarrs)
                 #time.sleep(0.1)
 
-                if step % self.lr_update_step == self.lr_update_step - 1:
-                        self.sess.run([self.lr_update])
+            if step % self.lr_update_epoch == self.lr_update_epoch - 1:
+                    self.sess.run([self.lr_update])
         self.coord.request_stop()
         self.coord.join(self.queueThreads)
 
