@@ -66,7 +66,7 @@ class DataLoader:
             print('n_lat =', self.n_lat, " = ", aqua_rg.variables['lat'][:3],"...",aqua_rg.variables['lat'][-3:])
             print('n_lon =', self.n_lon, " = ", aqua_rg.variables['lon'][:3],"...",aqua_rg.variables['lon'][-3:])
             # if flattened, the split is not the index of the first output name, but the index of the first output once flattened
-            if not self.config.convo:
+            if not True:#:
                 self.varNameSplit = self.accessTimeData(aqua_rg, self.inputNames, 0, doLog=True).shape[0]
             print('self.varNameSplit', self.varNameSplit)
             sampX, sampY = self.prepareData(aqua_rg, 0, doLog=True)
@@ -98,7 +98,7 @@ class DataLoader:
             print(Fore.RED, 'days', folders[0], '-->', folders[-1], Style.RESET_ALL)#[fn.split('/')[-1] for fn in folders], Style.RESET_ALL)
             self.tfRecordsFiles = []
             for fn in folders:
-                self.tfRecordsFiles += glob.glob(fn+"/*" + ('_c' if self.config.convo else '_f') + ".tfrecords")
+                self.tfRecordsFiles += glob.glob(fn+"/*" + ('_c' if True else '_f') + ".tfrecords")
             self.tfRecordsFiles = sorted(self.tfRecordsFiles)
             print("tfRecordsFiles", len(self.tfRecordsFiles))
 
@@ -142,13 +142,13 @@ class DataLoader:
             if self.config.convert_units:
                 arr = self.convertUnits(k, arr)
             #print(k, arr.shape)
-            if self.config.convo:
+            if True:#:
                 if arr.shape[0] == 1:
                     arr = np.tile(arr, (self.n_lev,1,1))
             if doLog: 
                 print('accessTimeData', k, arr.shape)
             inputs += [arr]
-        if self.config.convo:
+        if True:#:
             inX = np.stack(inputs, axis=0)
         else: # make a soup of numbers
             inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
@@ -164,7 +164,7 @@ class DataLoader:
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
 
     def recordFileName(self, filename):
-        return filename + ('_c' if self.config.convo else '_f') + '.tfrecords' # address to save the TFRecords file into
+        return filename + ('_c' if True else '_f') + '.tfrecords' # address to save the TFRecords file into
 
     def makeTfRecordsDate(self, date):
         def _bytes_feature(value):
