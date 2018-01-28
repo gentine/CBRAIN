@@ -23,7 +23,7 @@ net_arg.add_argument('--hidden',  type=str, default='1024,1024', help='comma sep
 data_arg = add_argument_group('Data')
 data_arg.add_argument('--output_names', type=str, default='SPDT,SPDQ', help='names of predicted variable(s)')
 data_arg.add_argument('--batch_size', type=int, default=1024)
-data_arg.add_argument('--frac_train', type=float, default=0.5)
+data_arg.add_argument('--frac_train', type=float, default=0.8)
 data_arg.add_argument('--local', type=str2bool, default=False)
 data_arg.add_argument('--epoch', type=int, default=200)
 data_arg.add_argument('--randomize', type=str2bool, default=True)
@@ -51,7 +51,7 @@ train_arg.add_argument('--use_gpu', type=str2bool, default=True)
 train_arg.add_argument('--run_validation', type=str2bool, default=True)
 train_arg.add_argument('--keep_dropout_rate', type=float, default=1.)
 train_arg.add_argument('--trivial_init', type=int, default=0)
-train_arg.add_argument('--lossfct', type=str, default="abs") #abs, mse, logloss, Rsquared
+train_arg.add_argument('--lossfct', type=str, default="mse") #abs, mse, logloss, Rsquared
 
 # Misc
 #parser.add('-c', '--config', default='', is_config_file=True, help='config file path')
