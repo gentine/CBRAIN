@@ -17,7 +17,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
         error = y - pred
         sqrLosses = tf.square(error, name='sqrLosses')
         absLosses = tf.abs(error, name='absLosses')
-        loglosses = tf.divide(tf.log(absLosses+1e-7), tf.log(10.0), name='loglosses')
+        loglosses = tf.divide(tf.log(absLosses+1e-15), tf.log(10.0), name='loglosses')
         batchAvgY = tf.reduce_mean(y, axis=0, keep_dims=True, name='batchAvgY')
         batchAvgPred = tf.reduce_mean(pred, axis=0, keep_dims=True, name='batchAvgPred')
         for iOut in range(len(names)):
@@ -29,7 +29,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
             lossDict['meanYPerVar'+'/'+outName]     = tf.reduce_mean(batchAvgY[:,iOut,:], axis=0, name='meanYPerVar'+'/'+outName)
             lossDict['meanPredPerVar'+'/'+outName]  = tf.reduce_mean(batchAvgPred[:,iOut,:], axis=0, name='meanPredPerVar'+'/'+outName)
             lossDict['meanErrPerVar'+'/'+outName]   = tf.reduce_mean(tf.square(y[:,iOut,:] - batchAvgY[:,iOut,:]), axis=0, name='meanErrPerVar'+'/'+outName)
-            lossDict['R2PerVar'+'/'+outName]        = tf.identity(1. - tf.divide(lossDict['sqrLossesPerVar'+'/'+outName] ,lossDict['meanErrPerVar'+'/'+outName]+1e-7), name='R2PerVar'+'/'+outName)
+            lossDict['R2PerVar'+'/'+outName]        = tf.identity(1. - tf.divide(lossDict['sqrLossesPerVar'+'/'+outName] ,lossDict['meanErrPerVar'+'/'+outName]+1e-15), name='R2PerVar'+'/'+outName)
     with tf.name_scope('lossAvgLevel'):
         keys = list(lossDict.keys())
         for n in keys:
@@ -37,7 +37,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
 
     with tf.name_scope('loss'):
         lossDict['RMSE'] = tf.sqrt(tf.reduce_mean(sqrLosses), name='RMSE')
-        lossDict['log10_RMSE'] = tf.identity(tf.log(lossDict['RMSE'])/tf.log(10.), name='log10_RMSE')
+        lossDict['logRMSE'] = tf.identity(tf.log(lossDict['RMSE']) / tf.log(10.), name='logRMSE')
         lossDict['mse'] = tf.reduce_mean(sqrLosses, name='mse')
         lossDict['logloss'] = tf.reduce_mean(loglosses, name='logloss')
         lossDict['absloss'] = tf.reduce_mean(absLosses, name='absloss')
