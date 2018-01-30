@@ -17,20 +17,19 @@ def makeLossesPerVar(y, pred, names, lossfct):
         error = y - pred
         sqrLosses = tf.square(error, name='sqrLosses')
         absLosses = tf.abs(error, name='absLosses')
-        loglosses = tf.divide(tf.log(absLosses+1e-30), tf.log(10.0), name='loglosses')
+        loglosses = tf.divide(tf.log(absLosses+1e-7), tf.log(10.0), name='loglosses')
         batchAvgY = tf.reduce_mean(y, axis=0, keep_dims=True, name='batchAvgY')
         batchAvgPred = tf.reduce_mean(pred, axis=0, keep_dims=True, name='batchAvgPred')
         for iOut in range(len(names)):
             outName = names[iOut]
             lossDict['sqrLossesPerVar'+'/'+outName] = tf.reduce_mean(sqrLosses[:,iOut,:], axis=0, name='sqrLossesPerVar'+'/'+outName)
-            lossDict['sqrLossesPerVar'+'/'+outName] = tf.identity(tf.log(lossDict['sqrLossesPerVar'+'/'+outName])/tf.log(10.), name='log10_sqrLossesPerVar'+'/'+outName)
+            lossDict['logSqrLosPerVar'+'/'+outName] = tf.identity(tf.log(lossDict['sqrLossesPerVar'+'/'+outName]) / tf.log(10.), name='logSqrLosPerVar'+'/'+outName)
             lossDict['absLossesPerVar'+'/'+outName] = tf.reduce_mean(absLosses[:,iOut,:], axis=0, name='absLossesPerVar'+'/'+outName)
             lossDict['logLossesPerVar'+'/'+outName] = tf.reduce_mean(loglosses[:,iOut,:], axis=0, name='logLossesPerVar'+'/'+outName)
             lossDict['meanYPerVar'+'/'+outName]     = tf.reduce_mean(batchAvgY[:,iOut,:], axis=0, name='meanYPerVar'+'/'+outName)
             lossDict['meanPredPerVar'+'/'+outName]  = tf.reduce_mean(batchAvgPred[:,iOut,:], axis=0, name='meanPredPerVar'+'/'+outName)
             lossDict['meanErrPerVar'+'/'+outName]   = tf.reduce_mean(tf.square(y[:,iOut,:] - batchAvgY[:,iOut,:]), axis=0, name='meanErrPerVar'+'/'+outName)
-            lossDict['meanUneErrPerVar'+'/'+outName]= tf.reduce_mean(tf.square(y[:,iOut,:] - pred[:,iOut,:]), axis=0, name='meanUneErrPerVar'+'/'+outName)
-            lossDict['R2PerVar'+'/'+outName]        = tf.identity(1. - tf.divide(lossDict['meanUneErrPerVar'+'/'+outName] ,lossDict['meanErrPerVar'+'/'+outName]+1e-29), name='R2PerVar'+'/'+outName)
+            lossDict['R2PerVar'+'/'+outName]        = tf.identity(1. - tf.divide(lossDict['sqrLossesPerVar'+'/'+outName] ,lossDict['meanErrPerVar'+'/'+outName]+1e-7), name='R2PerVar'+'/'+outName)
     with tf.name_scope('lossAvgLevel'):
         keys = list(lossDict.keys())
         for n in keys:
@@ -42,7 +41,8 @@ def makeLossesPerVar(y, pred, names, lossfct):
         lossDict['mse'] = tf.reduce_mean(sqrLosses, name='mse')
         lossDict['logloss'] = tf.reduce_mean(loglosses, name='logloss')
         lossDict['absloss'] = tf.reduce_mean(absLosses, name='absloss')
-        lossDict['R2'] = tf.identity(1.- tf.divide(tf.reduce_sum(tf.square(y - pred)), tf.reduce_sum(tf.square(y - batchAvgY))), name='R2')
+        lossDict['R2'] = tf.identity(1.- tf.divide(tf.reduce_sum(sqrLosses), tf.reduce_sum(tf.square(y - batchAvgY))), name='R2')
+        
         # choose cost function
         if lossfct=="logloss":
             lossDict['loss'] = tf.identity(lossDict[lossfct], name="loss")
