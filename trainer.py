@@ -240,7 +240,7 @@ class Trainer(object):
         print('numChanOut:', numChanOut)
 
         # Add ops to save and restore all the variables.
-        self.losses = makeLossesPerLevel(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.config.lossfct)
+        self.losses = makeLossesPerVar(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.config.lossfct)
 
         summaries = []
         for n,op in self.losses.items():
