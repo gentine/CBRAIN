@@ -30,10 +30,10 @@ def makeLossesPerVar(y, pred, names, lossfct):
             lossDict['meanPredPerVar'+'/'+outName]  = tf.reduce_mean(batchAvgPred[:,iOut,:], axis=0, name='meanPredPerVar'+'/'+outName)
             lossDict['meanErrPerVar'+'/'+outName]   = tf.reduce_mean(tf.square(y[:,iOut,:] - batchAvgY[:,iOut,:]), axis=0, name='meanErrPerVar'+'/'+outName)
             lossDict['R2PerVar'+'/'+outName]        = tf.identity(1. - tf.divide(lossDict['sqrLossesPerVar'+'/'+outName] ,lossDict['meanErrPerVar'+'/'+outName]+1e-15), name='R2PerVar'+'/'+outName)
-    with tf.name_scope('lossAvgLevel'):
+    with tf.name_scope('lossAvgVar'):
         keys = list(lossDict.keys())
         for n in keys:
-            lossDict[n.replace('PerVar', 'AvgLev')] = tf.reduce_mean(lossDict[n], axis=-1, name=n.replace('PerVar', 'AvgLev'))
+            lossDict[n.replace('PerVar', 'AvgVar')] = tf.reduce_mean(lossDict[n], axis=-1, name=n.replace('PerVar', 'AvgVar'))
 
     with tf.name_scope('loss'):
         lossDict['RMSE'] = tf.sqrt(tf.reduce_mean(sqrLosses), name='RMSE')
