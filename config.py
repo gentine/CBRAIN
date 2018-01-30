@@ -17,7 +17,7 @@ def add_argument_group(name):
 net_arg = add_argument_group('Network')
 #net_arg.add_argument('--input_scale_size', type=int, default=64, help='input image will be resized with the given value as width and height')
 #net_arg.add_argument('--conv_hidden_num', type=int, default=128, choices=[64, 128,16,32],help='n in the paper')
-net_arg.add_argument('--hidden',  type=str, default='5,5', help='comma separated list of hidden layer units')
+net_arg.add_argument('--hidden',  type=str, default='1024,1024', help='comma separated list of hidden layer units')
 
 # Data
 data_arg = add_argument_group('Data')
