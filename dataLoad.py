@@ -33,7 +33,7 @@ class DataLoader:
         self.varNameSplit = -len(self.outputNames)
         self.rawFileBase = rawFileBase
         self.reload()
-    
+
     def reload(self):
         raw_data_train_path = trainingDataDirRaw+'*.nc'
         print(Fore.YELLOW, 'raw_data_train_path', raw_data_train_path, Style.RESET_ALL)
@@ -72,22 +72,22 @@ class DataLoader:
             sampX, sampY = self.prepareData(aqua_rg, 0, doLog=True)
             print('sampX =', sampX.shape)
             print('sampY =', sampY.shape)
-        
+
         try:
             for i in range(len(self.fileReader)):
                 self.fileReader[i].close()
         except:
             pass
         print("batchSize = ", self.config.batch_size)
-        
+
         self.Nsamples = len(self.rawDates) * self.n_tim * self.n_lon * self.n_lat
         self.NumBatch = self.Nsamples // self.config.batch_size
-        
+
         self.Xshape = list(sampX.shape)
         self.Yshape = list(sampY.shape)
         print('Xshape', self.Xshape)
         print('Yshape', self.Yshape)
-        
+
         ## this deals with tf records and using them by date for training/validation
         if not self.rawFileBase:
             tfRecordsFolderName = '/'.join(self.recordFileName(trainingDataDirTFRecords+date+'/t{0:02d}').split('/')[:-1])
@@ -102,8 +102,8 @@ class DataLoader:
             self.tfRecordsFiles = sorted(self.tfRecordsFiles)
             print("tfRecordsFiles", len(self.tfRecordsFiles))
 
-def __enter__(self):
-    return self
+    def __enter__(self):
+        return self
     def __exit__(self, exc_type, exc_value, traceback):
         try:
             for i in range(len(self.fileReader)):
@@ -111,61 +111,61 @@ def __enter__(self):
         except:
             pass
 
-def convertUnits(self, varname, arr):
-    """Make sure SPDQ and SPDT have comparable units"""
+    def convertUnits(self, varname, arr):
+        """Make sure SPDQ and SPDT have comparable units"""
         if varname == "SPDQ" or varname == "PHQ":
             return arr*2.5e6/1000.
-    return arr
-
-def accessTimeData(self, fileReader, names, iTim, doLog=False):
-    inputs = []
-    for k in names:
-        #if k =='dTdt_nonSP':
-        #    # tendency due to everything but convection
-        #    arr = fileReader['TPHYSTND'][iTim]  - fileReader['SPDT'][iTim]
-        #elif k=='dQdt_nonSP':
-        #    # tendency due to everything but convection
-        #    arr = fileReader['PHQ'][iTim]  - fileReader['SPDQ'][iTim]
-        #else:
-        if self.varDim[k] == 4:
-            arr = fileReader[k][iTim]
-            arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
+        return arr
+ 
+    def accessTimeData(self, fileReader, names, iTim, doLog=False):
+        inputs = []
+        for k in names:
+            #if k =='dTdt_nonSP':
+            #    # tendency due to everything but convection
+            #    arr = fileReader['TPHYSTND'][iTim]  - fileReader['SPDT'][iTim] 
+            #elif k=='dQdt_nonSP':
+            #    # tendency due to everything but convection
+            #    arr = fileReader['PHQ'][iTim]  - fileReader['SPDQ'][iTim] 
+            #else:
+            if self.varDim[k] == 4: 
+                arr = fileReader[k][iTim]
+                arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
             elif self.varDim[k] == 3:
                 arr = fileReader[k][iTim][None]
             elif self.varDim[k] == 2:
-                arr = fileReader[k][None]
+                arr = fileReader[k][None] 
             elif self.varDim[k] == 1: # latitude only
                 # need to transform in single as latitude is in double
                 arr = fileReader[k]
                 arr = np.swapaxes(np.tile(arr, (1,self.n_lon,1)),1,2)# repeat lat to trasnform into matrix
                 arr = arr.astype('float32') # impose float 32 like other varaiables
-        if self.config.convert_units:
-            arr = self.convertUnits(k, arr)
+            if self.config.convert_units:
+                arr = self.convertUnits(k, arr)
             #print(k, arr.shape)
             if True:#:
                 if arr.shape[0] == 1:
                     arr = np.tile(arr, (self.n_lev,1,1))
-        if doLog:
-            print('accessTimeData', k, arr.shape)
+            if doLog: 
+                print('accessTimeData', k, arr.shape)
             inputs += [arr]
         if True:#:
             inX = np.stack(inputs, axis=0)
-else: # make a soup of numbers
-    inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
-        if doLog:
+        else: # make a soup of numbers
+            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
+        if doLog: 
             print('accessTimeData ', names, inX.shape)
-    return inX
+        return inX
 
-def prepareData(self, fileReader, iTim, doLog=False):
-    samp = self.accessTimeData(fileReader, self.varAllList, iTim, doLog)
-    return np.split(samp, [self.varNameSplit])
-    
+    def prepareData(self, fileReader, iTim, doLog=False):
+        samp = self.accessTimeData(fileReader, self.varAllList, iTim, doLog)
+        return np.split(samp, [self.varNameSplit])
+
     def get_inputs(self):
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
-    
+
     def recordFileName(self, filename):
         return filename + ('_c' if True else '_f') + '.tfrecords' # address to save the TFRecords file into
-    
+
     def makeTfRecordsDate(self, date):
         def _bytes_feature(value):
             return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
@@ -178,7 +178,7 @@ def prepareData(self, fileReader, iTim, doLog=False):
         if not os.path.exists(folderName):
             os.makedirs(folderName)
         shards = self.n_tim
-        sampBar = tqdm(range(shards), leave=False)
+        sampBar = tqdm(range(shards), leave=False) 
         with nc.Dataset(self.rawFiles[date], mode='r') as aqua_rg:
             for iTim in sampBar:
                 # open the TFRecords file
@@ -193,13 +193,13 @@ def prepareData(self, fileReader, iTim, doLog=False):
                 if True:
                     if True:
                         feature = {'X': _bytes_feature(tf.compat.as_bytes(sX.tostring())),
-                            'Y': _bytes_feature(tf.compat.as_bytes(sY.tostring()))
-                            }
-                        #                for iLat in range(sX.shape[-2]):
-                        #                    for iLon in range(sX.shape[-1]):
-                        #                        feature = {'X': _bytes_feature(tf.compat.as_bytes(sX[:,:,iLat,iLon].tostring())),
-                        #                               'Y': _bytes_feature(tf.compat.as_bytes(sY[:,:,iLat,iLon].tostring()))
-                        #                               }
+                                   'Y': _bytes_feature(tf.compat.as_bytes(sY.tostring()))
+                                   }
+#                for iLat in range(sX.shape[-2]):
+#                    for iLon in range(sX.shape[-1]):
+#                        feature = {'X': _bytes_feature(tf.compat.as_bytes(sX[:,:,iLat,iLon].tostring())),
+#                               'Y': _bytes_feature(tf.compat.as_bytes(sY[:,:,iLat,iLon].tostring()))
+#                               }
                         # Create an example protocol buffer
                         example = tf.train.Example(features=tf.train.Features(feature=feature))
                         # Serialize to string and write on the file
@@ -207,74 +207,74 @@ def prepareData(self, fileReader, iTim, doLog=False):
                 writer.close()
                 sys.stdout.flush()
 
-def makeTfRecords(self, n_threads=4):
-    """ Start background threads to feed queue """
+    def makeTfRecords(self, n_threads=4):
+        """ Start background threads to feed queue """
         threads = []
         print("starting %d data threads for making records" % n_threads)
-        #        for k in range(len(self.rawDates)):
-        #            t = threading.Thread(target=self.makeTfRecordsDate, args=(self.rawDates[k]))
-        #            t.daemon = True # thread will close when parent quits
-        #            t.start()
-        #            threads.append(t)
+#        for k in range(len(self.rawDates)):
+#            t = threading.Thread(target=self.makeTfRecordsDate, args=(self.rawDates[k]))
+#            t.daemon = True # thread will close when parent quits
+#            t.start()
+#            threads.append(t)
         daysBar = tqdm(range(len(self.rawDates)))
         for k in daysBar:
             date = self.rawDates[k]
             self.makeTfRecordsDate(date)
 
-def read_and_decode(self, filename_queue):
-    reader = tf.TFRecordReader()
-    _, serialized_example = reader.read(filename_queue)
-    features = tf.parse_single_example(serialized_example,
-                                       features={
-                                       'X': tf.FixedLenFeature([], tf.string),
-                                       'Y': tf.FixedLenFeature([], tf.string)
-                                       })
-                                       X = tf.decode_raw(features['X'], tf.float32)
-                                           Y = tf.decode_raw(features['Y'], tf.float32)
-                                           #print('read_and_decode X', X)
-                                           X.set_shape(np.prod(self.Xshape))
-                                           Y.set_shape(np.prod(self.Yshape))
-                                           #print('read_and_decode X', X)
-                                           X = tf.reshape(X, self.Xshape)
-                                           Y = tf.reshape(Y, self.Yshape)
-                                           print('read_and_decode X', X)
-                                           print('read_and_decode Y', Y)
-                                               return X, Y
+    def read_and_decode(self, filename_queue):
+        reader = tf.TFRecordReader()
+        _, serialized_example = reader.read(filename_queue)
+        features = tf.parse_single_example(serialized_example,
+            features={
+            'X': tf.FixedLenFeature([], tf.string),
+            'Y': tf.FixedLenFeature([], tf.string)
+        })
+        X = tf.decode_raw(features['X'], tf.float32)
+        Y = tf.decode_raw(features['Y'], tf.float32)
+        #print('read_and_decode X', X)
+        X.set_shape(np.prod(self.Xshape))
+        Y.set_shape(np.prod(self.Yshape))
+        #print('read_and_decode X', X)
+        X = tf.reshape(X, self.Xshape)
+        Y = tf.reshape(Y, self.Yshape)
+        print('read_and_decode X', X)
+        print('read_and_decode Y', Y)
+        return X, Y
 
-def get_record_inputs(self, train, batch_size, num_epochs):
-    """Reads input data num_epochs times.
+    def get_record_inputs(self, train, batch_size, num_epochs):
+        """Reads input data num_epochs times.
         Args:
         train: Selects between the training (True) and validation (False) data.
         batch_size: Number of examples per returned batch.
         num_epochs: Number of times to read the input data, or 0/None to
-        train forever.
+           train forever.
         Note that an tf.train.QueueRunner is added to the graph, which
         must be run using e.g. tf.train.start_queue_runners().
         """
-            if not num_epochs: num_epochs = None
-                with tf.name_scope('dequeue'):
-                    filename_queue = tf.train.string_input_producer(self.tfRecordsFiles, num_epochs=num_epochs, shuffle=self.config.randomize)
-                    print('filename_queue', filename_queue)
-                    X, Y = self.read_and_decode(filename_queue)
-                    X = tf.transpose(tf.reshape(X, self.Xshape[:2]+[-1]), [2,0,1])
-                    Y = tf.transpose(tf.reshape(Y, self.Yshape[:2]+[-1]), [2,0,1])
-                    X = tf.expand_dims(X, -1)
-                    Y = tf.expand_dims(Y, -1)
-                    # Shuffle the examples and collect them into batch_size batches.
-                    # (Internally uses a RandomShuffleQueue.)
-                    # We run this in two threads to avoid being a bottleneck.
-                    self.capacityTrain = 8192 * 32
-                        if self.config.randomize:
-                            b_X, b_Y = tf.train.shuffle_batch([X, Y], batch_size=batch_size, num_threads=2,
-                                                              enqueue_many=True,
-                                                              capacity=self.capacityTrain,
-                                                              min_after_dequeue=self.capacityTrain // 2)
-                                else:
-                                    b_X, b_Y = tf.train.batch([X, Y], batch_size=batch_size, num_threads=2,
-                                                              enqueue_many=True,
-                                                              capacity=self.capacityTrain)
-                                        print('self.capacityTrain', self.capacityTrain)
-                                            return b_X, b_Y
+        if not num_epochs: num_epochs = None
+        with tf.name_scope('dequeue'):
+            filename_queue = tf.train.string_input_producer(self.tfRecordsFiles, num_epochs=num_epochs, shuffle=self.config.randomize)
+            print('filename_queue', filename_queue)
+            X, Y = self.read_and_decode(filename_queue)
+            X = tf.transpose(tf.reshape(X, self.Xshape[:2]+[-1]), [2,0,1])
+            Y = tf.transpose(tf.reshape(Y, self.Yshape[:2]+[-1]), [2,0,1])
+            X = tf.expand_dims(X, -1)
+            Y = tf.expand_dims(Y, -1)
+            # Shuffle the examples and collect them into batch_size batches.
+            # (Internally uses a RandomShuffleQueue.)
+            # We run this in two threads to avoid being a bottleneck.
+            self.capacityTrain = 8192 * 32
+            if self.config.randomize:
+                b_X, b_Y = tf.train.shuffle_batch([X, Y], batch_size=batch_size, num_threads=2,
+                                                    enqueue_many=True,
+                                                    capacity=self.capacityTrain,
+                                                    min_after_dequeue=self.capacityTrain // 2)
+            else:
+                b_X, b_Y = tf.train.batch([X, Y], batch_size=batch_size, num_threads=2,
+                                                    enqueue_many=True,
+                                            capacity=self.capacityTrain)
+            print('self.capacityTrain', self.capacityTrain)
+        return b_X, b_Y
 
 if __name__ == "__main__":
     config, unparsed = get_config()
@@ -285,4 +285,3 @@ if __name__ == "__main__":
         assert(False)
     dh = DataLoader(trainingDataDir, config, raw_file_base)
     dh.makeTfRecords()
-

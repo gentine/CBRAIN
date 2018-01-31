@@ -12,7 +12,7 @@ def makeLossesPerLevel(y, pred, names, lossfct):
     assert(numChanOut == len(names))
     print('numChanOut:', numChanOut)
     print(names)
-    lossDict = {}
+    lossDict = {}   
     with tf.name_scope('lossPerLevel'):
         error = y - pred
         sqrLosses = tf.square(error, name='sqrLosses')
@@ -30,10 +30,10 @@ def makeLossesPerLevel(y, pred, names, lossfct):
             lossDict['totErrPerLev'+'/'+outName]    = tf.reduce_mean(tf.square(y[:,iOut,:] - batchAvgY[:,iOut,:]), axis=0, name='totErrPerLev'+'/'+outName)
             lossDict['R2PerLev'+'/'+outName]        = tf.identity(1 - lossDict['sqrLossesPerLev'+'/'+outName] / (lossDict['totErrPerLev'+'/'+outName] + 1e-15), name='R2PerLev'+'/'+outName)
 
-with tf.name_scope('lossAvgLevel'):
-    keys = list(lossDict.keys())
-    for n in keys:
-        lossDict[n.replace('PerLev', 'AvgLev')] = tf.reduce_mean(lossDict[n], axis=-1, name=n.replace('PerLev', 'AvgLev'))
+    with tf.name_scope('lossAvgLevel'):
+        keys = list(lossDict.keys())
+        for n in keys:
+            lossDict[n.replace('PerLev', 'AvgLev')] = tf.reduce_mean(lossDict[n], axis=-1, name=n.replace('PerLev', 'AvgLev'))
 
     with tf.name_scope('loss'):
         lossDict['RMSE'] = tf.sqrt(tf.reduce_mean(sqrLosses), name='RMSE')
@@ -41,7 +41,7 @@ with tf.name_scope('lossAvgLevel'):
         lossDict['logloss'] = tf.reduce_mean(loglosses, name='logloss')
         lossDict['absloss'] = tf.reduce_mean(absLosses, name='absloss')
         lossDict['R2'] = tf.identity(1 - tf.reduce_mean(sqrLosses) / (tf.reduce_mean(tf.square(y[:,:,:] - batchAvgY[:,:,:])) + 1e-15), name='R2')
-        
+
         # choose cost function
         if lossfct=="logloss":
             lossDict['loss'] = tf.identity(lossDict[lossfct], name="loss")
@@ -54,7 +54,6 @@ with tf.name_scope('lossAvgLevel'):
         if lossfct=="RMSE":
             lossDict['loss'] = tf.identity(lossDict['RMSE'], name="loss")
 
-for n in lossDict.keys():
-    print(n, lossDict[n])
+    for n in lossDict.keys():
+        print(n, lossDict[n])
     return lossDict
-
