@@ -146,7 +146,7 @@ class DataLoader:
             levmax = max(levmax, arr.shape[0])
             inputs += [arr]
         inputs = [np.tile(a, (levmax,1,1)) if a.shape[0] == 1 else a for a in inputs]
-        
+
         if doLog: 
             for k in names:
                 print('accessTimeData', k, arr.shape)
@@ -262,8 +262,8 @@ class DataLoader:
             Y = tf.transpose(tf.reshape(Y, self.Yshape[:2]+[-1]), [2,0,1])
             X = tf.expand_dims(X, -1)
             Y = tf.expand_dims(Y, -1)
-            X = X[:,:,-self.n_lev:,:]
-            Y = Y[:,:,-self.n_lev:,:]
+            X = X[:,:,-self.n_lev:,:][:,:,::-1]
+            Y = Y[:,:,-self.n_lev:,:][:,:,::-1]
             # Shuffle the examples and collect them into batch_size batches.
             # (Internally uses a RandomShuffleQueue.)
             # We run this in two threads to avoid being a bottleneck.
