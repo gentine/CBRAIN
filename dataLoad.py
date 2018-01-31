@@ -119,6 +119,7 @@ class DataLoader:
  
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
+        levmax = 0
         for k in names:
             #if k =='dTdt_nonSP':
             #    # tendency due to everything but convection
@@ -129,7 +130,7 @@ class DataLoader:
             #else:
             if self.varDim[k] == 4: 
                 arr = fileReader[k][iTim]
-                arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
+#                arr = arr[-self.n_lev:,:,:] # select just n levels
             elif self.varDim[k] == 3:
                 arr = fileReader[k][iTim][None]
             elif self.varDim[k] == 2:
@@ -142,12 +143,13 @@ class DataLoader:
             if self.config.convert_units:
                 arr = self.convertUnits(k, arr)
             #print(k, arr.shape)
-            if True:#:
-                if arr.shape[0] == 1:
-                    arr = np.tile(arr, (self.n_lev,1,1))
-            if doLog: 
-                print('accessTimeData', k, arr.shape)
+            levmax = max(levmax, arr.shape[0])
             inputs += [arr]
+        inputs = [np.tile(a, (levmax,1,1)) if a.shape[0] == 1 else a for a in inputs]
+        
+        if doLog: 
+            for k in names:
+                print('accessTimeData', k, arr.shape)
         if True:#:
             inX = np.stack(inputs, axis=0)
         else: # make a soup of numbers
@@ -260,6 +262,8 @@ class DataLoader:
             Y = tf.transpose(tf.reshape(Y, self.Yshape[:2]+[-1]), [2,0,1])
             X = tf.expand_dims(X, -1)
             Y = tf.expand_dims(Y, -1)
+            X = X[:,:,-self.n_lev:,:]
+            Y = Y[:,:,-self.n_lev:,:]
             # Shuffle the examples and collect them into batch_size batches.
             # (Internally uses a RandomShuffleQueue.)
             # We run this in two threads to avoid being a bottleneck.
