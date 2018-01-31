@@ -3,7 +3,7 @@ from __future__ import print_function
 import tensorflow as tf
 import keras.backend as K
 from keras.layers import ELU
-from keras import losses
+
 
 def makeLossesPerVar(y, pred, names, lossfct):
     print('makeLossesPerVar')
@@ -22,13 +22,11 @@ def makeLossesPerVar(y, pred, names, lossfct):
         maintain_averages_op = emaVariable.apply([batchAvgY, batchAvgPred])
         with tf.control_dependencies([maintain_averages_op]):
             error = tf.identity(y - pred, name='error')
-        emaY = emaVariable.average(batchAvgY)
-        emaPred = emaVariable.average(batchAvgPred)
-        rescaledY = y / (emaY + 1e-6)
-        rescaledError = tf.identity(error + rescaledY - pred, name='rescaledError')
         sqrLosses = tf.square(error, name='sqrLosses')
         absLosses = tf.abs(error, name='absLosses')
-        loglosses = tf.divide(tf.log(absLosses), tf.log(10.0), name='loglosses')
+        loglosses = tf.divide(tf.log(absLosses+1e-15), tf.log(10.0), name='loglosses')
+        emaY = emaVariable.average(batchAvgY)
+        emaPred = emaVariable.average(batchAvgPred)
 
     with tf.name_scope('PerVar'):
         for iOut in range(len(names)):
@@ -40,7 +38,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
             lossDict['meanYPerVar'+'/'+outName]     = tf.reduce_mean(emaY[:,iOut,:], axis=0, name='meanYPerVar'+'/'+outName)
             lossDict['meanPredPerVar'+'/'+outName]  = tf.reduce_mean(emaPred[:,iOut,:], axis=0, name='meanPredPerVar'+'/'+outName)
             lossDict['meanErrPerVar'+'/'+outName]   = tf.reduce_mean(tf.square(y[:,iOut,:] - emaY[:,iOut,:]), axis=0, name='meanErrPerVar'+'/'+outName)
-            lossDict['R2PerVar'+'/'+outName]        = ELU(name='R2PerVar'+'/'+outName)(1. - tf.divide(lossDict['sqrLossesPerVar'+'/'+outName] ,lossDict['meanErrPerVar'+'/'+outName]))
+            lossDict['R2PerVar'+'/'+outName]        = ELU(name='R2PerVar'+'/'+outName)(1. - tf.divide(lossDict['sqrLossesPerVar'+'/'+outName] ,lossDict['meanErrPerVar'+'/'+outName]+1e-15))
     with tf.name_scope('lossAvgVar'):
         keys = list(lossDict.keys())
         for n in keys:
@@ -55,7 +53,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
             lossDict['meanYPerLev'+'/'+outName]     = tf.reduce_mean(emaY[:,:,iLev], axis=0, name='meanYPerLev'+'/'+outName)
             lossDict['meanPredPerLev'+'/'+outName]  = tf.reduce_mean(emaPred[:,:,iLev], axis=0, name='meanPredPerLev'+'/'+outName)
             lossDict['meanErrPerLev'+'/'+outName]   = tf.reduce_mean(tf.square(y[:,:,iLev] - emaY[:,:,iLev]), axis=0, name='meanErrPerLev'+'/'+outName)
-            lossDict['R2PerLev'+'/'+outName]        = ELU(name='R2PerLev'+'/'+outName)(1. - tf.divide(lossDict['sqrLossesPerLev'+'/'+outName] ,lossDict['meanErrPerLev'+'/'+outName]))
+            lossDict['R2PerLev'+'/'+outName]        = ELU(name='R2PerLev'+'/'+outName)(1. - tf.divide(lossDict['sqrLossesPerLev'+'/'+outName] ,lossDict['meanErrPerLev'+'/'+outName]+1e-15))
     with tf.name_scope('lossAvgLev'):
         keys = [k for k in list(lossDict.keys()) if 'Lev' in k]
         for n in keys:
@@ -68,14 +66,18 @@ def makeLossesPerVar(y, pred, names, lossfct):
         lossDict['logloss'] = tf.reduce_mean(loglosses, name='logloss')
         lossDict['absloss'] = tf.reduce_mean(absLosses, name='absloss')
         lossDict['R2'] = ELU(name='R2')(1.- tf.divide(tf.reduce_sum(sqrLosses), tf.reduce_sum(tf.square(y - batchAvgY))))
-        lossDict['mape'] = tf.reduce_mean(losses.mean_absolute_percentage_error(y, pred), name="mape")
         
         # choose cost function
-        lossDict['loss'] = lossDict[lossfct]
-        if lossfct=="R2":
-            lossDict['loss'] = -lossDict[lossfct]
-
-        lossDict['loss'] = tf.identity(lossDict['loss'], name="loss")
+        if lossfct=="logloss":
+            lossDict['loss'] = tf.identity(lossDict[lossfct], name="loss")
+        if lossfct=="abs":
+            lossDict['loss'] = tf.identity(lossDict['absloss'], name="loss")
+        if lossfct=="Rsquared":
+            lossDict['loss'] = tf.identity(-lossDict['R2'], name="loss")
+        if lossfct=="mse":
+            lossDict['loss'] = tf.identity(lossDict['mse'], name="loss")
+        if lossfct=="RMSE":
+            lossDict['loss'] = tf.identity(lossDict['RMSE'], name="loss")
 
     for n in lossDict.keys():
         print(n, lossDict[n])
