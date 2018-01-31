@@ -104,10 +104,10 @@ class Trainer(object):
         g._finalized = False
 
     def train(self):
-        try:
-            visualizer = Beholder(session=self.sess, logdir='logs')
-        except:
-            pass
+#        try:
+#            visualizer = Beholder(session=self.sess, logdir='logs')
+#        except:
+#            pass
         totStep = 0
         for ep in range(1, self.config.epoch + 1):
             trainBar = trange(self.start_step, self.data_loader.NumBatch)
@@ -148,10 +148,10 @@ class Trainer(object):
 
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
                 frameWorld = result['frameWorld']#self.sess.run(self.visuarrs)
-                try:
-                    visualizer.update(arrays=visuarrs, frame=frameWorld)
-                except:
-                    pass#visualizer.update(arrays=visuarrs, frame=np.concatenate(visuarrs, axis=1))
+#                try:
+#                    visualizer.update(arrays=visuarrs, frame=frameWorld)
+#                except:
+#                    pass#visualizer.update(arrays=visuarrs, frame=np.concatenate(visuarrs, axis=1))
                 #for i in range(63+0*step//1000): self.sess.run(self.x)
                 #if step % 100 == 0:
                 #    self.sess.run(self.visuarrs)
@@ -240,7 +240,7 @@ class Trainer(object):
         print('numChanOut:', numChanOut)
 
         # Add ops to save and restore all the variables.
-        self.losses = makeLossesPerLevel(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.config.lossfct)
+        self.losses = makeLossesPerVar(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.config.lossfct)
 
         summaries = []
         for n,op in self.losses.items():
