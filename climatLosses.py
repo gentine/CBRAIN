@@ -9,6 +9,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
     print('makeLossesPerVar')
     print('y:', y)
     print('pred:', pred)
+    tf.assert_equal(y.shape[1:], pred.shape[1:])
     numChanOut = y.get_shape().as_list()[1]
     numLevels = y.get_shape().as_list()[2]
     assert(numChanOut == len(names))

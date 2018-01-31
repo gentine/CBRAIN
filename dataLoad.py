@@ -98,7 +98,7 @@ class DataLoader:
             print(Fore.RED, 'days', folders[0], '-->', folders[-1], Style.RESET_ALL)#[fn.split('/')[-1] for fn in folders], Style.RESET_ALL)
             self.tfRecordsFiles = []
             for fn in folders:
-                self.tfRecordsFiles += glob.glob(fn+"/*" + ('_c' if True else '_f') + ".tfrecords")
+                self.tfRecordsFiles += glob.glob(fn+"/*" + '_c' + ".tfrecords")
             self.tfRecordsFiles = sorted(self.tfRecordsFiles)
             print("tfRecordsFiles", len(self.tfRecordsFiles))
 
@@ -150,10 +150,7 @@ class DataLoader:
         if doLog: 
             for k in names:
                 print('accessTimeData', k, arr.shape)
-        if True:#:
-            inX = np.stack(inputs, axis=0)
-        else: # make a soup of numbers
-            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
+        inX = np.stack(inputs, axis=0)
         if doLog: 
             print('accessTimeData ', names, inX.shape)
         return inX
@@ -166,7 +163,7 @@ class DataLoader:
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
 
     def recordFileName(self, filename):
-        return filename + ('_c' if True else '_f') + '.tfrecords' # address to save the TFRecords file into
+        return filename + '_c' + '.tfrecords' # address to save the TFRecords file into
 
     def makeTfRecordsDate(self, date):
         def _bytes_feature(value):

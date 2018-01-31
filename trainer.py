@@ -8,6 +8,7 @@ from glob import glob
 from tqdm import trange
 from itertools import chain
 from collections import deque
+from functools import reduce
 
 try:
 	from beholder.beholder import Beholder
@@ -194,15 +195,16 @@ class Trainer(object):
     def build_model(self):
         x = self.x
         print('x:', x)
-        numChanOut = self.y.get_shape().as_list()[1]
+        shapeY = self.y.get_shape().as_list()[1:]
+        numOut = reduce( (lambda x, y: x * y), shapeY)
 
         x = Flatten()(x)
         for nLay in self.config.hidden.split(','):
             nLay = int(nLay)
             print('x:', x)
             x = Dense(nLay, activation=self.config.act)(x)
-        x = tf.expand_dims(tf.expand_dims(x, -1),-1)
-        x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
+        x = Dense(numOut, activation='linear')(x)
+        x = Reshape(shapeY)(x)
         print('self.pred:', x)
         self.pred = x#tf.reshape(x, self.y.get_shape())
 
