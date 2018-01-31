@@ -35,6 +35,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
             lossDict['logSqrLosPerVar'+'/'+outName] = tf.identity(tf.log(lossDict['sqrLossesPerVar'+'/'+outName]) / tf.log(10.), name='logSqrLosPerVar'+'/'+outName)
             lossDict['absLossesPerVar'+'/'+outName] = tf.reduce_mean(absLosses[:,iOut,:], axis=0, name='absLossesPerVar'+'/'+outName)
             lossDict['logLossesPerVar'+'/'+outName] = tf.reduce_mean(loglosses[:,iOut,:], axis=0, name='logLossesPerVar'+'/'+outName)
+<<<<<<< HEAD
             lossDict['meanYPerVar'+'/'+outName]     = tf.reduce_mean(emaY[:,iOut,:], axis=0, name='meanYPerVar'+'/'+outName)
             lossDict['meanPredPerVar'+'/'+outName]  = tf.reduce_mean(emaPred[:,iOut,:], axis=0, name='meanPredPerVar'+'/'+outName)
             lossDict['meanErrPerVar'+'/'+outName]   = tf.reduce_mean(tf.square(y[:,iOut,:] - emaY[:,iOut,:]), axis=0, name='meanErrPerVar'+'/'+outName)
@@ -58,6 +59,16 @@ def makeLossesPerVar(y, pred, names, lossfct):
         keys = [k for k in list(lossDict.keys()) if 'Lev' in k]
         for n in keys:
             lossDict[n.replace('PerLev', 'AvgLev')] = tf.reduce_mean(lossDict[n], axis=-1, name=n.replace('PerLev', 'AvgLev'))
+=======
+            lossDict['meanYPerVar'+'/'+outName]     = tf.reduce_mean(batchAvgY[:,iOut,:], axis=0, name='meanYPerVar'+'/'+outName)
+            lossDict['meanPredPerVar'+'/'+outName]  = tf.reduce_mean(batchAvgPred[:,iOut,:], axis=0, name='meanPredPerVar'+'/'+outName)
+            lossDict['meanErrPerVar'+'/'+outName]   = tf.reduce_mean(tf.square(y[:,iOut,:] - batchAvgY[:,iOut,:]), axis=0, name='meanErrPerVar'+'/'+outName)
+            lossDict['R2PerVar'+'/'+outName]        = tf.identity(1. - tf.divide(lossDict['sqrLossesPerVar'+'/'+outName] ,lossDict['meanErrPerVar'+'/'+outName]+1e-15), name='R2PerVar'+'/'+outName)
+    with tf.name_scope('lossAvgLevel'):
+        keys = list(lossDict.keys())
+        for n in keys:
+            lossDict[n.replace('PerVar', 'AvgLev')] = tf.reduce_mean(lossDict[n], axis=-1, name=n.replace('PerVar', 'AvgLev'))
+>>>>>>> parent of 4082873... Climat Loss change name perlev to pervar
 
     with tf.name_scope('loss'):
         lossDict['RMSE'] = tf.sqrt(tf.reduce_mean(sqrLosses), name='RMSE')
