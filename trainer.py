@@ -9,6 +9,7 @@ from tqdm import trange
 from itertools import chain
 from collections import deque
 from functools import reduce
+from keras.layers import ELU
 
 try:
 	from beholder.beholder import Beholder
@@ -138,8 +139,8 @@ class Trainer(object):
                     self.summary_writer.flush()
 
                     losses = result['losses']
-                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), losses['R2'], 0, self.lr.eval(session=self.sess)))
+                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, corr:{:+.3f},q:{:d}, lr:{:.4g}". \
+                        format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), losses['R2'], -losses['corr'], 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
                         if 'Adam' not in op.name:
@@ -188,8 +189,8 @@ class Trainer(object):
                 self.summary_writer.flush()
 
                 losses = result['losses']
-                trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}". \
-                    format(losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.),losses['R2']))
+                trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, corr:{:+.3f},". \
+                    format(losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.),losses['R2'],losses['corr']))
             time.sleep(sleepTime)
         self.coord.request_stop()
         self.coord.join(self.queueThreads)
