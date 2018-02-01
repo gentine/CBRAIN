@@ -49,9 +49,11 @@ class Trainer(object):
         K.set_learning_phase(config.is_train)
         with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
             if self.config.convo:
-                self.build_model_convo()
+                model = self.build_model_convo()
             else:
-                self.build_model()
+                model = self.build_model()
+            model.summary()
+            self.pred = model(self.x)
 
             self.build_trainop()
 
@@ -193,45 +195,40 @@ class Trainer(object):
         exit(0)
 
     def build_model(self):
-        x = self.x
-        print('x:', x)
+        shapeX = self.x.get_shape().as_list()[1:]
         shapeY = self.y.get_shape().as_list()[1:]
         numOut = reduce( (lambda x, y: x * y), shapeY)
 
-        x = Flatten()(x)
+        model = Sequential()
+        model.add(Activation('linear', input_shape=shapeX))
+        model.add(Flatten())
         for nLay in self.config.hidden.split(','):
             nLay = int(nLay)
-            print('x:', x)
-            x = Dense(nLay, activation=self.config.act)(x)
-        x = Dense(numOut, activation='linear')(x)
-        x = Reshape(shapeY)(x)
-        print('self.pred:', x)
-        self.pred = x#tf.reshape(x, self.y.get_shape())
+            model.add(Dense(nLay, activation=self.config.act))
+        model.add(Dense(numOut, activation='linear'))
+        model.add(Reshape(shapeY))
+        return model
 
     def build_model_convo(self):
-        x = self.x
-        print('x:', x)
-        numChanOut = self.y.get_shape().as_list()[1]
-        shapeX = self.x.get_shape().as_list()
+        shapeX = self.x.get_shape().as_list()[1:]
+        shapeY = self.y.get_shape().as_list()[1:]
+        numChanOut = shapeY[0]
 
-        x = tf.reshape(x, [-1]+[shapeX[1]*shapeX[2]])
+        model = Sequential()
+        model.add(Activation('linear', input_shape=shapeX))
+        model.add(Reshape([-1]+[shapeX[0]*shapeX[1]]))
         #x = tf.layers.batch_normalization(x, axis=1, momentum=0.999, training=self.config.is_train)
-        x = tf.reshape(x, shapeX)
-        print('batchNorm(x):', x)
+        model.add(Reshape(shapeX))
         for nLay in self.config.hidden.split(','):
             nLay = int(nLay)
-            x = tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')
-            print('x:', x)
+            model.add(Lambda(lambda x: tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')))
             if self.config.localConvo:
-                x = LocallyConnected2D(nLay, (3,1), data_format='channels_first')(x)
+                model.add(LocallyConnected2D(nLay, (3,1), data_format='channels_first'))
             else:
-                x = Conv2D(nLay, (3,1), padding='valid', data_format='channels_first')(x)
-            x = LeakyReLU()(x)
-        print('x:', x)
-        x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
-#        x *= 1e-3
-        print('self.pred:', x)
-        self.pred = x#tf.reshape(x, self.y.get_shape())
+                model.add(Conv2D(nLay, (3,1), padding='valid', data_format='channels_first'))
+            model.add(LeakyReLU())
+        model.add(Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first'))
+        return model
 
     def build_trainop(self):
         y = self.y*1000
