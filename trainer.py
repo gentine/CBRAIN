@@ -61,23 +61,24 @@ class Trainer(object):
         self.visuarrs = []
         y0 = self.y[:,:1]
         self.frameWorld = tf.log(1+tf.reshape(tf.reduce_mean(y0, axis=2), [self.data_loader.n_lat, -1]))
-        with tf.name_scope('visuarrs'):
-            maxWidth = self.data_loader.n_lon
-            Xhb1c = tf.transpose(self.x[:maxWidth,:,:,0], [2,0,1])
-            Yhb1c = tf.transpose(self.y[:maxWidth,:,:,0], [2,0,1])
-            Phb1c = tf.transpose(self.pred[:maxWidth,:,:,0], [2,0,1])
-            #Lhb1c = tf.transpose(self.losses['loss'][:maxWidth,:,:], [2,0,1])
-            self.visuarrs += tf.unstack(Xhb1c, axis=-1)
-            self.visuarrs += tf.unstack(Yhb1c, axis=-1)
-            self.visuarrs += tf.unstack(Phb1c, axis=-1)
-            #self.visuarrs += tf.unstack(Lhb1c, axis=-1)
-            self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,0], axis=1), [self.data_loader.n_lat, -1])]
-            self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,0], axis=1), [self.data_loader.n_lat, -1])]
-            self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,1], axis=1), [self.data_loader.n_lat, -1])]
-            self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,1], axis=1), [self.data_loader.n_lat, -1])]
-            print("self.frameWorld", self.frameWorld.shape)
-            for op in self.visuarrs:
-                print('self.visuarrs', op)
+        if False:
+            with tf.name_scope('visuarrs'):
+                maxWidth = self.data_loader.n_lon
+                Xhb1c = tf.transpose(self.x[:maxWidth,:,:,0], [2,0,1])
+                Yhb1c = tf.transpose(self.y[:maxWidth,:,:,0], [2,0,1])
+                Phb1c = tf.transpose(self.pred[:maxWidth,:,:,0], [2,0,1])
+                #Lhb1c = tf.transpose(self.losses['loss'][:maxWidth,:,:], [2,0,1])
+                self.visuarrs += tf.unstack(Xhb1c, axis=-1)
+                self.visuarrs += tf.unstack(Yhb1c, axis=-1)
+                self.visuarrs += tf.unstack(Phb1c, axis=-1)
+                #self.visuarrs += tf.unstack(Lhb1c, axis=-1)
+                self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,0], axis=1), [self.data_loader.n_lat, -1])]
+                self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,0], axis=1), [self.data_loader.n_lat, -1])]
+                self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,1], axis=1), [self.data_loader.n_lat, -1])]
+                self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,1], axis=1), [self.data_loader.n_lat, -1])]
+                print("self.frameWorld", self.frameWorld.shape)
+                for op in self.visuarrs:
+                    print('self.visuarrs', op)
 
         self.valStr = '' if config.is_train else '_val'
         self.saver = tf.train.Saver()# if self.config.is_train else None
@@ -235,9 +236,6 @@ class Trainer(object):
         p = self.pred
         print('y:', y)
         print('p:', p)
-        numChanOut = y.get_shape().as_list()[1]
-        print('numChanOut:', numChanOut)
-
         # Add ops to save and restore all the variables.
         self.losses = makeLossesPerVar(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.config.lossfct)
 

@@ -78,6 +78,6 @@ def makeLossesPerVar(y, pred, names, lossfct):
 
         lossDict['loss'] = tf.identity(lossDict['loss'], name="loss")
 
-    for n in lossDict.keys():
-        print(n, lossDict[n])
+    #for n in lossDict.keys():
+    #    print(n, lossDict[n])
     return lossDict
