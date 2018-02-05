@@ -35,7 +35,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
         for iOut in range(len(names)):
             outName = names[iOut]
             lossDict['sqrLossesPerVar'+'/'+outName] = tf.reduce_mean(sqrLosses[:,iOut,:], axis=0, name='sqrLossesPerVar'+'/'+outName)
-            lossDict['logSqrLosPerVar'+'/'+outName] = tf.identity(tf.log(lossDict['sqrLossesPerVar'+'/'+outName]) / tf.log(10.), name='logSqrLosPerVar'+'/'+outName)
+            lossDict['logSqrLosPerVar'+'/'+outName] = tf.identity(tf.log(lossDict['sqrLossesPerVar'+'/'+outName] + 1e-20) / tf.log(10.), name='logSqrLosPerVar'+'/'+outName)
             lossDict['absLossesPerVar'+'/'+outName] = tf.reduce_mean(absLosses[:,iOut,:], axis=0, name='absLossesPerVar'+'/'+outName)
             lossDict['logLossesPerVar'+'/'+outName] = tf.reduce_mean(loglosses[:,iOut,:], axis=0, name='logLossesPerVar'+'/'+outName)
             lossDict['meanYPerVar'+'/'+outName]     = tf.reduce_mean(emaY[:,iOut,:], axis=0, name='meanYPerVar'+'/'+outName)
@@ -50,7 +50,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
         for iLev in range(numLevels):
             outName = str(iLev)
             lossDict['sqrLossesPerLev'+'/'+outName] = tf.reduce_mean(sqrLosses[:,:,iLev], axis=0, name='sqrLossesPerLev'+'/'+outName)
-            lossDict['logSqrLosPerLev'+'/'+outName] = tf.identity(tf.log(lossDict['sqrLossesPerLev'+'/'+outName]) / tf.log(10.), name='logSqrLosPerLev'+'/'+outName)
+            lossDict['logSqrLosPerLev'+'/'+outName] = tf.identity(tf.log(lossDict['sqrLossesPerLev'+'/'+outName] + 1e-20) / tf.log(10.), name='logSqrLosPerLev'+'/'+outName)
             lossDict['absLossesPerLev'+'/'+outName] = tf.reduce_mean(absLosses[:,:,iLev], axis=0, name='absLossesPerLev'+'/'+outName)
             lossDict['logLossesPerLev'+'/'+outName] = tf.reduce_mean(loglosses[:,:,iLev], axis=0, name='logLossesPerLev'+'/'+outName)
             lossDict['meanYPerLev'+'/'+outName]     = tf.reduce_mean(emaY[:,:,iLev], axis=0, name='meanYPerLev'+'/'+outName)
@@ -64,7 +64,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
 
     with tf.name_scope('loss'):
         lossDict['RMSE'] = tf.sqrt(tf.reduce_mean(sqrLosses), name='RMSE')
-        lossDict['logRMSE'] = tf.identity(tf.log(lossDict['RMSE']) / tf.log(10.), name='logRMSE')
+        lossDict['logRMSE'] = tf.identity(tf.log(lossDict['RMSE'] + 1e-20) / tf.log(10.), name='logRMSE')
         lossDict['mse'] = tf.reduce_mean(sqrLosses, name='mse')
         lossDict['logloss'] = tf.reduce_mean(loglosses, name='logloss')
         lossDict['absloss'] = tf.reduce_mean(absLosses, name='absloss')
