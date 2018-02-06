@@ -64,7 +64,6 @@ misc_arg.add_argument('--log_level', type=str, default='INFO', choices=['INFO', 
 misc_arg.add_argument('--log_dir', type=str, default='logs')
 misc_arg.add_argument('--data_dir', type=str, default='data')
 misc_arg.add_argument('--random_seed', type=int, default=123)
-misc_arg.add_argument('--act', type=str, default='relu')
 misc_arg.add_argument('--addon', type=str, default='')
 
 def get_config():
