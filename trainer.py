@@ -50,11 +50,11 @@ class Trainer(object):
         K.set_learning_phase(config.is_train)
         with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
             if self.config.convo:
-                model = self.build_model_convo()
+                self.model = self.build_model_convo()
             else:
-                model = self.build_model()
-            model.summary()
-            self.pred = model(self.x)
+                self.model = self.build_model()
+            self.model.summary()
+            self.pred = self.model(self.x)
 
             self.build_trainop()
 
