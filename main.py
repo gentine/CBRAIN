@@ -44,7 +44,6 @@ def main(config):
     save_config(config)
     with DataLoader(trainingDataDir, config) as data_loader:
         trainer = Trainer(config, data_loader)
-
         if config.is_train:
             save_config(config)
             print('batches=', data_loader.NumBatch)
@@ -71,6 +70,11 @@ def main(config):
                 raise Exception("[!] You should specify `load_path` to load a pretrained model")
             print('batches=', data_loader.NumBatch)
             trainer.validate()
+    
+    # Save model after training
+    model_save_name = config.model_dir + 'saved_keras_model.h5'
+    print('Saving model as', model_save_name)
+    trainer.model.save(model_save_name)
 
 
 if __name__ == "__main__":
