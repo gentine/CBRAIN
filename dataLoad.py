@@ -2,6 +2,7 @@ import numpy as np
 import shutil, time, math, itertools, os
 import h5netcdf as h5py
 import netCDF4 as nc
+from netCDF4 import Dataset
 from tqdm import tqdm
 import tensorflow as tf
 import threading
@@ -115,11 +116,21 @@ class DataLoader:
         """Make sure SPDQ and SPDT have comparable units"""
         if varname == "SPDQ" or varname == "PHQ":
             return arr*2.5e6/1000.
+        return arr 
+    
+    # normalize data based on mean and std.nc files
+    def normalizeInoutputs(self, varname, mean_data, std_data, arr):
+        mean    = mean_data.variables[varname]
+        std     = std_data.variables[varname]
+        arr     = (arr - mean)/std
         return arr
- 
+    
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
         levmax = 0
+        if self.config.normalizeInoutputs:
+            mean_data = Dataset(mean_file, mode='r')
+            std_data  = Dataset(std_file, mode='r')
         for k in names:
             #if k =='dTdt_nonSP':
             #    # tendency due to everything but convection
@@ -140,8 +151,12 @@ class DataLoader:
                 arr = fileReader[k]
                 arr = np.swapaxes(np.tile(arr, (1,self.n_lon,1)),1,2)# repeat lat to trasnform into matrix
                 arr = arr.astype('float32') # impose float 32 like other varaiables
-            if self.config.convert_units:
-                arr = self.convertUnits(k, arr)
+            # noamlize data firs, better for convergences
+            if self.config.normalizeInoutputs:
+                arr = self.normalizeInoutputs(k, mean_data, std_data, arr)
+            else: # does not allow double nmormalizations
+                if self.config.convert_units:
+                    arr = self.convertUnits(k, arr)
             #print(k, arr.shape)
             levmax = max(levmax, arr.shape[0])
             inputs += [arr]

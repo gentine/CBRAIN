@@ -37,7 +37,7 @@ def main(config):
                                           'frac_train', 'randomize', 'random_seed', 'convert_units','lossfct'])
             print(Fore.RED, 'config\n', config)
             print(Style.RESET_ALL)
-        #setattr(config, 'batch_size', 1024)
+        #setattr(config, 'batch_size', 1c024)
         data_path = config.data_path
         batch_size = config.batch_size
         do_shuffle = False
