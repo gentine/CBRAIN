@@ -41,9 +41,9 @@ train_arg = add_argument_group('Training')
 train_arg.add_argument('--is_train', type=str2bool, default=True)
 train_arg.add_argument('--optimizer', type=str, default='adam')
 train_arg.add_argument('--max_step', type=int, default=1000000)
-train_arg.add_argument('--lr_update_step', type=int, default=1000)
+train_arg.add_argument('--lr_update_step', type=int, default=10000)
 train_arg.add_argument('--lr_update_epoch', type=int, default=1)
-train_arg.add_argument('--lr', type=float, default=0.001)
+train_arg.add_argument('--lr', type=float, default=0.00025)
 train_arg.add_argument('--lr_lower_boundary', type=float, default=2e-8)
 train_arg.add_argument('--beta1', type=float, default=0.5)
 train_arg.add_argument('--beta2', type=float, default=0.999)
@@ -53,7 +53,7 @@ train_arg.add_argument('--use_gpu', type=str2bool, default=True)
 train_arg.add_argument('--run_validation', type=str2bool, default=True)
 train_arg.add_argument('--keep_dropout_rate', type=float, default=1.)
 train_arg.add_argument('--trivial_init', type=int, default=0)
-train_arg.add_argument('--lossfct', type=str, default="mse") #abs, mse, logloss, Rsquared
+train_arg.add_argument('--lossfct', type=str, default="absloss") #abs, mse, absloss, logloss, Rsquared
 
 # Misc
 #parser.add('-c', '--config', default='', is_config_file=True, help='config file path')

@@ -141,7 +141,6 @@ class DataLoader:
             #else:
             if self.varDim[k] == 4: 
                 arr = fileReader[k][iTim]
-#                arr = arr[-self.n_lev:,:,:] # select just n levels
             elif self.varDim[k] == 3:
                 arr = fileReader[k][iTim][None]
             elif self.varDim[k] == 2:
@@ -158,9 +157,11 @@ class DataLoader:
                 if self.config.convert_units:
                     arr = self.convertUnits(k, arr)
             #print(k, arr.shape)
+            if self.varDim[k] == 4: 
+                arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
             levmax = max(levmax, arr.shape[0])
             inputs += [arr]
-        inputs = [np.tile(a, (levmax,1,1)) if a.shape[0] == 1 else a for a in inputs]
+            inputs = [np.tile(a, (levmax,1,1)) if a.shape[0] == 1 else a for a in inputs]
 
         if doLog: 
             for k in names:

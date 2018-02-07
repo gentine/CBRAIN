@@ -25,7 +25,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
             error = tf.identity(y - pred, name='error')
         emaY = emaVariable.average(batchAvgY)
         emaPred = emaVariable.average(batchAvgPred)
-        rescaledY = y / (emaY + 1e-6)
+        rescaledY = y / (emaY + 1e-20)
         rescaledError = tf.identity(error + rescaledY - pred, name='rescaledError')
         sqrLosses = tf.square(error, name='sqrLosses')
         absLosses = tf.abs(error, name='absLosses')
