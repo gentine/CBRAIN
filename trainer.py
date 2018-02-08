@@ -220,20 +220,20 @@ class Trainer(object):
         model.add(Activation('linear', input_shape=shapeX))
         model.add(Reshape([-1]+[shapeX[0]*shapeX[1]]))
         #x = tf.layers.batch_normalization(x, axis=1, momentum=0.999, training=self.config.is_train)
-        # TODO: add a fully connected layer at the end
         model.add(Reshape(shapeX))
         for nLay in self.config.hidden.split(','):
             nLay = int(nLay)
-            model.add(Lambda(lambda x: tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')))
-            if(nLay != int(self.config.hidden.split(','))):
+            if(nLay == 1):
+                model.add(Lambda(lambda x: tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')))
                 if self.config.localConvo:
                     model.add(LocallyConnected2D(nLay, (self.config.filter_size,1), data_format='channels_first'))
                 else:
                     model.add(Conv2D(nLay, (self.config.filter_size,1), padding='valid', data_format='channels_first'))
-            else: # add dense layer for the final one
+            else: # add dense layer for other than first one
                 model.add(Dense(nLay, activation=self.config.act))
-            model.add(LeakyReLU())
-        model.add(Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first'))
+        model.add(Dense(numChanOut, activation='linear'))
+        model.add(Reshape(shapeY))
+       # model.add(Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first'))
         return model
 
     def build_trainop(self):
