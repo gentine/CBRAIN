@@ -71,10 +71,7 @@ def main(config):
             print('batches=', data_loader.NumBatch)
             trainer.validate()
     
-    # Save model after training
-    model_save_name = config.model_dir + 'saved_keras_model.h5'
-    print('Saving model as', model_save_name)
-    trainer.model.save(model_save_name)
+
 
 
 if __name__ == "__main__":

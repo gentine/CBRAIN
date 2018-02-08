@@ -150,6 +150,10 @@ class Trainer(object):
                             except:
                                 pass
                             np.save(filename, npar)
+                            # Save model after training
+                            model_save_name = self.config.model_dir + '/saved_keras_model.h5'
+                            print('Saving model as', model_save_name)
+                            self.model.save(model_save_name)
 
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
                 frameWorld = result['frameWorld']#self.sess.run(self.visuarrs)
@@ -221,19 +225,15 @@ class Trainer(object):
         model.add(Reshape([-1]+[shapeX[0]*shapeX[1]]))
         #x = tf.layers.batch_normalization(x, axis=1, momentum=0.999, training=self.config.is_train)
         model.add(Reshape(shapeX))
-        for nLay in self.config.hidden.split(','):
+        for nLay in self.config.hidden.split(','):# for all but last (linear) layer
             nLay = int(nLay)
-            if(nLay == 1):
-                model.add(Lambda(lambda x: tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')))
-                if self.config.localConvo:
-                    model.add(LocallyConnected2D(nLay, (self.config.filter_size,1), data_format='channels_first'))
-                else:
-                    model.add(Conv2D(nLay, (self.config.filter_size,1), padding='valid', data_format='channels_first'))
-            else: # add dense layer for other than first one
-                model.add(Dense(nLay, activation=self.config.act))
-        model.add(Dense(numChanOut, activation='linear'))
-        model.add(Reshape(shapeY))
-       # model.add(Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first'))
+            model.add(Lambda(lambda x: tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')))
+            if self.config.localConvo:
+                model.add(LocallyConnected2D(nLay, (self.config.filter_size,1), data_format='channels_first'))
+            else: # add dense layer for the final one
+                model.add(Conv2D(nLay, (self.config.filter_size,1), padding='valid', data_format='channels_first'))
+            model.add(LeakyReLU())
+        model.add(Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first'))# linear combination - like linear activation but for convolution
         return model
 
     def build_trainop(self):
