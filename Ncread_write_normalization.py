@@ -120,43 +120,42 @@ try:
     os.remove("mean.nc")
 except:
     pass
-dataset = Dataset("mean.nc", "w", format="NETCDF4_CLASSIC")
+dataset = Dataset("mean.nc", "w")
 level   = dataset.createDimension("level", nlevels)
 lats     = dataset.createDimension("lats", nlats)
 lon     = dataset.createDimension("lon", 1)
 #time    = dataset.createDimension("time", 1)
 #time    = dataset.createDimension( 1)
 temp    = dataset.createVariable("QAP",np.float32,("level","lats","lon"))
-temp[:] = mean_QAP
+temp[:] = mean_QAP[0,:,:,:]
 temp    = dataset.createVariable("TAP",np.float32,("level","lats","lon"))
-temp[:] = mean_TAP
+temp[:] = mean_TAP[0,:,:,:]
 temp    = dataset.createVariable("QBP",np.float32,("level","lats","lon"))
-temp[:] = mean_QBP
+temp[:] = mean_QBP[0,:,:,:]
 temp    = dataset.createVariable("TBP",np.float32,("level","lats","lon"))
-temp[:] = mean_TBP
+temp[:] = mean_TBP[0,:,:,:]
 temp    = dataset.createVariable("dTdt_adiabatic",np.float32,("level","lats","lon"))
-temp[:] = mean_dTdt_adiabatic
+temp[:] = mean_dTdt_adiabatic[0,:,:,:]
 temp    = dataset.createVariable("dQdt_adiabatic",np.float32,("level","lats","lon"))
-temp[:] = mean_dQdt_adiabatic
+temp[:] = mean_dQdt_adiabatic[0,:,:,:]
 temp    = dataset.createVariable("SPDT",np.float32,("level","lats","lon"))
-temp[:] = mean_SPDT
+temp[:] = mean_SPDT[0,:,:,:]
 temp    = dataset.createVariable("SPDQ",np.float32,("level","lats","lon"))
-temp[:] = mean_SPDQ
+temp[:] = mean_SPDQ[0,:,:,:]
 temp    = dataset.createVariable("TPHYSTND_NORAD",np.float32,("level","lats","lon"))
-temp[:] = mean_TPHYSTND_NORAD
+temp[:] = mean_TPHYSTND_NORAD[0,:,:,:]
 temp    = dataset.createVariable("PHQ",np.float32,("level","lats","lon"))
-temp[:] = mean_PHQ
+temp[:] = mean_PHQ[0,:,:,:]
 temp    = dataset.createVariable("SHFLX",np.float32,("lats","lon"))
-temp[:] = mean_SHFLX
+temp[:] = mean_SHFLX[0,:,:]
 temp    = dataset.createVariable("LHFLX",np.float32,("lats","lon"))
-temp[:] = mean_LHFLX
+temp[:] = mean_LHFLX[0,:,:]
 temp    = dataset.createVariable("PS",np.float32)
 temp[:] = mean_PS
 temp    = dataset.createVariable("lat",np.float32)
 temp[:] = mean_lat
 temp    = dataset.createVariable("SOLIN",np.float32)
 temp[:] = mean_SOLIN
-
 dataset.close()
 
 
@@ -164,35 +163,36 @@ try:
     os.remove("std.nc")
 except:
     pass
-dataset = Dataset("std.nc", "w", format="NETCDF4_CLASSIC")
+dataset = Dataset("std.nc", "w")
 level   = dataset.createDimension("level", nlevels)
-lats    = dataset.createDimension("lats", nlats)
+lats     = dataset.createDimension("lats", nlats)
 lon     = dataset.createDimension("lon", 1)
+#time    = dataset.createDimension("time", 1)
 #time    = dataset.createDimension( 1)
 temp    = dataset.createVariable("QAP",np.float32,("level","lats","lon"))
-temp[:] = std_QAP
+temp[:] = std_QAP[0,:,:,:]
 temp    = dataset.createVariable("TAP",np.float32,("level","lats","lon"))
-temp[:] = std_TAP
+temp[:] = std_TAP[0,:,:,:]
 temp    = dataset.createVariable("QBP",np.float32,("level","lats","lon"))
-temp[:] = std_QBP
+temp[:] = std_QBP[0,:,:,:]
 temp    = dataset.createVariable("TBP",np.float32,("level","lats","lon"))
-temp[:] = std_TBP
+temp[:] = std_TBP[0,:,:,:]
 temp    = dataset.createVariable("dTdt_adiabatic",np.float32,("level","lats","lon"))
-temp[:] = std_dTdt_adiabatic
+temp[:] = std_dTdt_adiabatic[0,:,:,:]
 temp    = dataset.createVariable("dQdt_adiabatic",np.float32,("level","lats","lon"))
-temp[:] = std_dQdt_adiabatic
+temp[:] = std_dQdt_adiabatic[0,:,:,:]
 temp    = dataset.createVariable("SPDT",np.float32,("level","lats","lon"))
-temp[:] = std_SPDT
+temp[:] = std_SPDT[0,:,:,:]
 temp    = dataset.createVariable("SPDQ",np.float32,("level","lats","lon"))
-temp[:] = std_SPDQ
+temp[:] = std_SPDQ[0,:,:,:]
 temp    = dataset.createVariable("TPHYSTND_NORAD",np.float32,("level","lats","lon"))
-temp[:] = std_TPHYSTND_NORAD
+temp[:] = std_TPHYSTND_NORAD[0,:,:,:]
 temp    = dataset.createVariable("PHQ",np.float32,("level","lats","lon"))
-temp[:] = std_PHQ
+temp[:] = std_PHQ[0,:,:,:]
 temp    = dataset.createVariable("SHFLX",np.float32,("lats","lon"))
-temp[:] = std_SHFLX
+temp[:] = std_SHFLX[0,:,:]
 temp    = dataset.createVariable("LHFLX",np.float32,("lats","lon"))
-temp[:] = std_LHFLX
+temp[:] = std_LHFLX[0,:,:]
 temp    = dataset.createVariable("PS",np.float32)
 temp[:] = std_PS
 temp    = dataset.createVariable("lat",np.float32)
@@ -200,6 +200,5 @@ temp[:] = std_lat
 temp    = dataset.createVariable("SOLIN",np.float32)
 temp[:] = std_SOLIN
 dataset.close()
-
 
 print("End Reading Netcdf for Normalization")

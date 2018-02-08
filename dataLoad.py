@@ -2,7 +2,6 @@ import numpy as np
 import shutil, time, math, itertools, os
 import h5netcdf as h5py
 import netCDF4 as nc
-from netCDF4 import Dataset
 from tqdm import tqdm
 import tensorflow as tf
 import threading
@@ -33,6 +32,9 @@ class DataLoader:
         print('self.varAllList', self.varAllList)
         self.varNameSplit = -len(self.outputNames)
         self.rawFileBase = rawFileBase
+        if self.config.normalizeInoutputs:
+            self.mean_data = h5py.File(mean_file, 'r') 
+            self.std_data  = h5py.File(std_file,  'r') 
         self.reload()
 
     def reload(self):
@@ -119,10 +121,10 @@ class DataLoader:
         return arr 
     
     # normalize data based on mean and std.nc files
-    def normalizeInoutputs(self, varname, mean_data, std_data, arr):
-        mean    = np.array(mean_data.variables[varname])
-        std     = np.array(std_data.variables[varname])
-        arr     = (arr - mean)/std
+    def normalizeInoutputs(self, varname, arr):
+        meandata= np.array(self.mean_data.variables[varname])
+        stddata = np.array(self.std_data.variables[varname])
+        arr     = (arr - meandata)/stddata
 #        test    = np.sum(np.where(mean>50000))
 #        test2   = np.sum(np.where(mean>50000))
 #        if(test+test2>0):
@@ -131,9 +133,7 @@ class DataLoader:
     
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
-        if self.config.normalizeInoutputs:
-            mean_data = nc.Dataset(mean_file, mode='r') 
-            std_data  = nc.Dataset(std_file, mode='r') 
+        
         for k in names:
             #if k =='dTdt_nonSP':
             #    # tendency due to everything but convection
@@ -155,7 +155,7 @@ class DataLoader:
                 arr = arr.astype('float32') # impose float 32 like other varaiables
             # noamlize data firs, better for convergences
             if self.config.normalizeInoutputs:
-                arr = self.normalizeInoutputs(k, mean_data, std_data, arr)
+                arr = self.normalizeInoutputs(k, arr)
             else: # does not allow double nmormalizations
                 if self.config.convert_units:
                     arr = self.convertUnits(k, arr)
@@ -184,9 +184,7 @@ class DataLoader:
             inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
         if doLog: 
             print('accessTimeData ', names, inX.shape)
-        if self.config.normalizeInoutputs:
-            mean_data.close() 
-            std_data.close() 
+        
         return inX
 
     def prepareData(self, fileReader, iTim, doLog=False):
