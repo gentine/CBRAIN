@@ -2,7 +2,6 @@ import numpy as np
 import shutil, time, math, itertools, os
 import h5netcdf as h5py
 import netCDF4 as nc
-from netCDF4 import Dataset
 from tqdm import tqdm
 import tensorflow as tf
 import threading
@@ -120,17 +119,21 @@ class DataLoader:
     
     # normalize data based on mean and std.nc files
     def normalizeInoutputs(self, varname, mean_data, std_data, arr):
-        mean    = mean_data.variables[varname]
-        std     = std_data.variables[varname]
+        mean    = np.array(mean_data.variables[varname])
+        std     = np.array(std_data.variables[varname])
         arr     = (arr - mean)/std
+        test    = np.sum(np.where(mean>50000))
+        test2   = np.sum(np.where(mean>50000))
+        if(test+test2>0):
+            print("problem")
         return arr
     
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
         levmax = 0
         if self.config.normalizeInoutputs:
-            mean_data = Dataset(mean_file, mode='r')
-            std_data  = Dataset(std_file, mode='r')
+            mean_data = nc.Dataset(mean_file, mode='r') 
+            std_data  = nc.Dataset(std_file, mode='r') 
         for k in names:
             #if k =='dTdt_nonSP':
             #    # tendency due to everything but convection
@@ -166,7 +169,10 @@ class DataLoader:
         if doLog: 
             for k in names:
                 print('accessTimeData', k, arr.shape)
-        inX = np.stack(inputs, axis=0)
+        if True:#:
+            inX = np.stack(inputs, axis=0)
+        else: # make a soup of numbers
+            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
         if doLog: 
             print('accessTimeData ', names, inX.shape)
         return inX
@@ -179,7 +185,7 @@ class DataLoader:
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
 
     def recordFileName(self, filename):
-        return filename + '_c' + '.tfrecords' # address to save the TFRecords file into
+        return filename + ('_c' if True else '_f') + '.tfrecords' # address to save the TFRecords file into
 
     def makeTfRecordsDate(self, date):
         def _bytes_feature(value):
