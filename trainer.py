@@ -143,17 +143,21 @@ class Trainer(object):
                         format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), losses['R2'], -losses['corr'], 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
-                        if 'Adam' not in op.name:
-                            filename = self.model_dir+'/saveNet/'+op.name
-                            try:
-                                os.makedirs(os.path.dirname(filename))
-                            except:
-                                pass
-                            np.save(filename, npar)
-                            # Save model after training
-                            model_save_name = self.config.model_dir + '/saved_keras_model.h5'
-                            print('Saving model as', model_save_name)
-                            self.model.save(model_save_name)
+                if step % self.config.save_step == 0:
+                    filename = self.model_dir+'/saveNet/'+op.name
+                    try:
+                        os.makedirs(os.path.dirname(filename))
+                    except:
+                        pass
+                    np.save(filename, npar)
+                    # Save model after training
+                    model_save_name = self.config.model_dir + '/saved_keras_model.h5'
+                    try:
+                        os.makedirs(os.path.dirname(model_save_name))
+                    except:
+                        pass
+                    print('Saving model as', model_save_name)
+                    self.model.save(model_save_name)
 
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
                 frameWorld = result['frameWorld']#self.sess.run(self.visuarrs)
