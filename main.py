@@ -75,7 +75,7 @@ def main(config):
     model_save_name = config.model_dir + 'saved_keras_model.h5'
     print('Saving model as', model_save_name)
     trainer.model.save(model_save_name)
-    
+
 
 if __name__ == "__main__":
     config, unparsed = get_config()

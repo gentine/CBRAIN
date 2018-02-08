@@ -2,6 +2,7 @@ import numpy as np
 import shutil, time, math, itertools, os
 import h5netcdf as h5py
 import netCDF4 as nc
+from netCDF4 import Dataset
 from tqdm import tqdm
 import tensorflow as tf
 import threading
@@ -122,15 +123,14 @@ class DataLoader:
         mean    = np.array(mean_data.variables[varname])
         std     = np.array(std_data.variables[varname])
         arr     = (arr - mean)/std
-        test    = np.sum(np.where(mean>50000))
-        test2   = np.sum(np.where(mean>50000))
-        if(test+test2>0):
-            print("problem")
+#        test    = np.sum(np.where(mean>50000))
+#        test2   = np.sum(np.where(mean>50000))
+#        if(test+test2>0):
+#            print("problem")
         return arr
     
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
-        levmax = 0
         if self.config.normalizeInoutputs:
             mean_data = nc.Dataset(mean_file, mode='r') 
             std_data  = nc.Dataset(std_file, mode='r') 
@@ -159,12 +159,21 @@ class DataLoader:
             else: # does not allow double nmormalizations
                 if self.config.convert_units:
                     arr = self.convertUnits(k, arr)
-            #print(k, arr.shape)
-            if self.varDim[k] == 4: 
+            if self.varDim[k] == 4: # only keep n top pressure levels        
                 arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
-            levmax = max(levmax, arr.shape[0])
+            if True:#:
+                if arr.shape[0] == 1:
+                    arr = np.tile(arr, (self.n_lev,1,1))
+            if doLog: 
+                print('accessTimeData', k, arr.shape)
             inputs += [arr]
-            inputs = [np.tile(a, (levmax,1,1)) if a.shape[0] == 1 else a for a in inputs]
+        if True:#:
+            inX = np.stack(inputs, axis=0)
+        else: # make a soup of numbers
+            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
+        if doLog: 
+            print('accessTimeData ', names, inX.shape)
+        return inX
 
         if doLog: 
             for k in names:
