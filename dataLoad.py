@@ -184,6 +184,9 @@ class DataLoader:
             inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
         if doLog: 
             print('accessTimeData ', names, inX.shape)
+        if self.config.normalizeInoutputs:
+            mean_data.close() 
+            std_data.close() 
         return inX
 
     def prepareData(self, fileReader, iTim, doLog=False):
