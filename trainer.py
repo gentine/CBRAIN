@@ -150,7 +150,7 @@ class Trainer(object):
                     except:
                         pass
                     np.save(filename, npar)
-                    # Save model after training
+                    # Save keras model after training
                     model_save_name = self.config.model_dir + '/saved_keras_model.h5'
                     try:
                         os.makedirs(os.path.dirname(model_save_name))
@@ -214,7 +214,11 @@ class Trainer(object):
         model.add(Flatten())
         for nLay in self.config.hidden.split(','):
             nLay = int(nLay)
-            model.add(Dense(nLay, activation=self.config.act))
+            if(self.config.act=="leakyrelu"):
+                model.add(Dense(nLay))
+                model.add(LeakyReLU())
+            else: # regular keras activations
+                model.add(Dense(nLay, activation=self.config.act))
         model.add(Dense(numOut, activation='linear'))
         model.add(Reshape(shapeY))
         return model
@@ -236,7 +240,11 @@ class Trainer(object):
                 model.add(LocallyConnected2D(nLay, (self.config.filter_size,1), data_format='channels_first'))
             else: # add dense layer for the final one
                 model.add(Conv2D(nLay, (self.config.filter_size,1), padding='valid', data_format='channels_first'))
-            model.add(LeakyReLU())
+            if(self.config.act=="leakyrelu"):
+                model.add(LeakyReLU())
+            else: # regular keras activations
+                model.add(Activation(self.config.act))
+            
         model.add(Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first'))# linear combination - like linear activation but for convolution
         return model
 
