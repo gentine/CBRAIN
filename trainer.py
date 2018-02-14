@@ -249,7 +249,7 @@ class Trainer(object):
         return model
 
     def build_trainop(self):
-        y = self.y*1000
+        y = self.y
         p = self.pred
         print('y:', y)
         print('p:', p)
