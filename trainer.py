@@ -8,6 +8,8 @@ from glob import glob
 from tqdm import trange
 from itertools import chain
 from collections import deque
+from functools import reduce
+from keras.layers import ELU
 
 try:
 	from beholder.beholder import Beholder
@@ -48,9 +50,11 @@ class Trainer(object):
         K.set_learning_phase(config.is_train)
         with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
             if self.config.convo:
-                self.build_model_convo()
+                self.model = self.build_model_convo()
             else:
-                self.build_model()
+                self.model = self.build_model()
+            self.model.summary()
+            self.pred = self.model(self.x)
 
             self.build_trainop()
 
@@ -58,23 +62,24 @@ class Trainer(object):
         self.visuarrs = []
         y0 = self.y[:,:1]
         self.frameWorld = tf.log(1+tf.reshape(tf.reduce_mean(y0, axis=2), [self.data_loader.n_lat, -1]))
-        with tf.name_scope('visuarrs'):
-            maxWidth = self.data_loader.n_lon
-            Xhb1c = tf.transpose(self.x[:maxWidth,:,:,0], [2,0,1])
-            Yhb1c = tf.transpose(self.y[:maxWidth,:,:,0], [2,0,1])
-            Phb1c = tf.transpose(self.pred[:maxWidth,:,:,0], [2,0,1])
-            #Lhb1c = tf.transpose(self.losses['loss'][:maxWidth,:,:], [2,0,1])
-            self.visuarrs += tf.unstack(Xhb1c, axis=-1)
-            self.visuarrs += tf.unstack(Yhb1c, axis=-1)
-            self.visuarrs += tf.unstack(Phb1c, axis=-1)
-            #self.visuarrs += tf.unstack(Lhb1c, axis=-1)
-            self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,0], axis=1), [self.data_loader.n_lat, -1])]
-            self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,0], axis=1), [self.data_loader.n_lat, -1])]
-            self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,1], axis=1), [self.data_loader.n_lat, -1])]
-            self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,1], axis=1), [self.data_loader.n_lat, -1])]
-            print("self.frameWorld", self.frameWorld.shape)
-            for op in self.visuarrs:
-                print('self.visuarrs', op)
+        if False:
+            with tf.name_scope('visuarrs'):
+                maxWidth = self.data_loader.n_lon
+                Xhb1c = tf.transpose(self.x[:maxWidth,:,:,0], [2,0,1])
+                Yhb1c = tf.transpose(self.y[:maxWidth,:,:,0], [2,0,1])
+                Phb1c = tf.transpose(self.pred[:maxWidth,:,:,0], [2,0,1])
+                #Lhb1c = tf.transpose(self.losses['loss'][:maxWidth,:,:], [2,0,1])
+                self.visuarrs += tf.unstack(Xhb1c, axis=-1)
+                self.visuarrs += tf.unstack(Yhb1c, axis=-1)
+                self.visuarrs += tf.unstack(Phb1c, axis=-1)
+                #self.visuarrs += tf.unstack(Lhb1c, axis=-1)
+                self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,0], axis=1), [self.data_loader.n_lat, -1])]
+                self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,0], axis=1), [self.data_loader.n_lat, -1])]
+                self.visuarrs += [tf.reshape(tf.reduce_mean(self.y[:,1], axis=1), [self.data_loader.n_lat, -1])]
+                self.visuarrs += [tf.reshape(tf.reduce_mean(self.pred[:,1], axis=1), [self.data_loader.n_lat, -1])]
+                print("self.frameWorld", self.frameWorld.shape)
+                for op in self.visuarrs:
+                    print('self.visuarrs', op)
 
         self.valStr = '' if config.is_train else '_val'
         self.saver = tf.train.Saver()# if self.config.is_train else None
@@ -104,10 +109,10 @@ class Trainer(object):
         g._finalized = False
 
     def train(self):
-        try:
-            visualizer = Beholder(session=self.sess, logdir='logs')
-        except:
-            pass
+#        try:
+#            visualizer = Beholder(session=self.sess, logdir='logs')
+#        except:
+#            pass
         totStep = 0
         for ep in range(1, self.config.epoch + 1):
             trainBar = trange(self.start_step, self.data_loader.NumBatch)
@@ -134,24 +139,32 @@ class Trainer(object):
                     self.summary_writer.flush()
 
                     losses = result['losses']
-                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, q:{:d}, lr:{:.4g}". \
-                        format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), losses['R2'], 0, self.lr.eval(session=self.sess)))
+                    trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, corr:{:+.3f},q:{:d}, lr:{:.4g}". \
+                        format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), losses['R2'], -losses['corr'], 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
-                        if 'Adam' not in op.name:
-                            filename = self.model_dir+'/saveNet/'+op.name
-                            try:
-                                os.makedirs(os.path.dirname(filename))
-                            except:
-                                pass
-                            np.save(filename, npar)
+                if step % self.config.save_step == 0:
+                    filename = self.model_dir+'/saveNet/'+op.name
+                    try:
+                        os.makedirs(os.path.dirname(filename))
+                    except:
+                        pass
+                    np.save(filename, npar)
+                    # Save keras model after training
+                    model_save_name = self.config.model_dir + '/saved_keras_model.h5'
+                    try:
+                        os.makedirs(os.path.dirname(model_save_name))
+                    except:
+                        pass
+                    print('Saving model as', model_save_name)
+                    self.model.save(model_save_name)
 
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
                 frameWorld = result['frameWorld']#self.sess.run(self.visuarrs)
-                try:
-                    visualizer.update(arrays=visuarrs, frame=frameWorld)
-                except:
-                    pass#visualizer.update(arrays=visuarrs, frame=np.concatenate(visuarrs, axis=1))
+#                try:
+#                    visualizer.update(arrays=visuarrs, frame=frameWorld)
+#                except:
+#                    pass#visualizer.update(arrays=visuarrs, frame=np.concatenate(visuarrs, axis=1))
                 #for i in range(63+0*step//1000): self.sess.run(self.x)
                 #if step % 100 == 0:
                 #    self.sess.run(self.visuarrs)
@@ -184,63 +197,64 @@ class Trainer(object):
                 self.summary_writer.flush()
 
                 losses = result['losses']
-                trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}". \
-                    format(losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.),losses['R2']))
+                trainBar.set_description("L:{:.6f}, logL:{:.6f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, corr:{:+.3f},". \
+                    format(losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.),losses['R2'],losses['corr']))
             time.sleep(sleepTime)
         self.coord.request_stop()
         self.coord.join(self.queueThreads)
         exit(0)
 
     def build_model(self):
-        x = self.x
-        print('x:', x)
-        numChanOut = self.y.get_shape().as_list()[1]
+        shapeX = self.x.get_shape().as_list()[1:]
+        shapeY = self.y.get_shape().as_list()[1:]
+        numOut = reduce( (lambda x, y: x * y), shapeY)
 
-        x = Flatten()(x)
+        model = Sequential()
+        model.add(Activation('linear', input_shape=shapeX))
+        model.add(Flatten())
         for nLay in self.config.hidden.split(','):
             nLay = int(nLay)
-            print('x:', x)
-            x = Dense(nLay, activation=self.config.act)(x)
-        x = tf.expand_dims(tf.expand_dims(x, -1),-1)
-        x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
-        print('self.pred:', x)
-        self.pred = x#tf.reshape(x, self.y.get_shape())
+            if(self.config.act=="leakyrelu"):
+                model.add(Dense(nLay))
+                model.add(LeakyReLU())
+            else: # regular keras activations
+                model.add(Dense(nLay, activation=self.config.act))
+        model.add(Dense(numOut, activation='linear'))
+        model.add(Reshape(shapeY))
+        return model
 
     def build_model_convo(self):
-        x = self.x
-        print('x:', x)
-        numChanOut = self.y.get_shape().as_list()[1]
-        shapeX = self.x.get_shape().as_list()
+        shapeX = self.x.get_shape().as_list()[1:]
+        shapeY = self.y.get_shape().as_list()[1:]
+        numChanOut = shapeY[0]
 
-        x = tf.reshape(x, [-1]+[shapeX[1]*shapeX[2]])
+        model = Sequential()
+        model.add(Activation('linear', input_shape=shapeX))
+        model.add(Reshape([-1]+[shapeX[0]*shapeX[1]]))
         #x = tf.layers.batch_normalization(x, axis=1, momentum=0.999, training=self.config.is_train)
-        x = tf.reshape(x, shapeX)
-        print('batchNorm(x):', x)
-        for nLay in self.config.hidden.split(','):
+        model.add(Reshape(shapeX))
+        for nLay in self.config.hidden.split(','):# for all but last (linear) layer
             nLay = int(nLay)
-            x = tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')
-            print('x:', x)
+            model.add(Lambda(lambda x: tf.pad(x, paddings=[[0,0],[0,0],[1,1],[0,0]], mode='SYMMETRIC')))
             if self.config.localConvo:
-                x = LocallyConnected2D(nLay, (3,1), data_format='channels_first')(x)
-            else:
-                x = Conv2D(nLay, (3,1), padding='valid', data_format='channels_first')(x)
-            x = LeakyReLU()(x)
-        print('x:', x)
-        x = Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first')(x)
-#        x *= 1e-3
-        print('self.pred:', x)
-        self.pred = x#tf.reshape(x, self.y.get_shape())
+                model.add(LocallyConnected2D(nLay, (self.config.filter_size,1), data_format='channels_first'))
+            else: # add dense layer for the final one
+                model.add(Conv2D(nLay, (self.config.filter_size,1), padding='valid', data_format='channels_first'))
+            if(self.config.act=="leakyrelu"):
+                model.add(LeakyReLU())
+            else: # regular keras activations
+                model.add(Activation(self.config.act))
+            
+        model.add(Conv2D(numChanOut, (1,1), padding='valid', data_format='channels_first'))# linear combination - like linear activation but for convolution
+        return model
 
     def build_trainop(self):
         y = self.y*1000
         p = self.pred
         print('y:', y)
         print('p:', p)
-        numChanOut = y.get_shape().as_list()[1]
-        print('numChanOut:', numChanOut)
-
         # Add ops to save and restore all the variables.
-        self.losses = makeLossesPerLevel(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.config.lossfct)
+        self.losses = makeLossesPerVar(y[:,:,:,0], p[:,:,:,0], self.data_loader.outputNames, self.config.lossfct)
 
         summaries = []
         for n,op in self.losses.items():

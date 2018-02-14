@@ -37,14 +37,13 @@ def main(config):
                                           'frac_train', 'randomize', 'random_seed', 'convert_units','lossfct'])
             print(Fore.RED, 'config\n', config)
             print(Style.RESET_ALL)
-        #setattr(config, 'batch_size', 1024)
+        #setattr(config, 'batch_size', 1c024)
         data_path = config.data_path
         batch_size = config.batch_size
         do_shuffle = False
     save_config(config)
     with DataLoader(trainingDataDir, config) as data_loader:
         trainer = Trainer(config, data_loader)
-
         if config.is_train:
             save_config(config)
             print('batches=', data_loader.NumBatch)
@@ -71,6 +70,8 @@ def main(config):
                 raise Exception("[!] You should specify `load_path` to load a pretrained model")
             print('batches=', data_loader.NumBatch)
             trainer.validate()
+    
+
 
 
 if __name__ == "__main__":

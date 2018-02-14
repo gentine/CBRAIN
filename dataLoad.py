@@ -32,6 +32,9 @@ class DataLoader:
         print('self.varAllList', self.varAllList)
         self.varNameSplit = -len(self.outputNames)
         self.rawFileBase = rawFileBase
+        if self.config.normalizeInoutputs:
+            self.mean_data = h5py.File(mean_file, 'r') 
+            self.std_data  = h5py.File(std_file,  'r') 
         self.reload()
 
     def reload(self):
@@ -66,7 +69,7 @@ class DataLoader:
             print('n_lat =', self.n_lat, " = ", aqua_rg.variables['lat'][:3],"...",aqua_rg.variables['lat'][-3:])
             print('n_lon =', self.n_lon, " = ", aqua_rg.variables['lon'][:3],"...",aqua_rg.variables['lon'][-3:])
             # if flattened, the split is not the index of the first output name, but the index of the first output once flattened
-            if not self.config.convo:
+            if not True:#:
                 self.varNameSplit = self.accessTimeData(aqua_rg, self.inputNames, 0, doLog=True).shape[0]
             print('self.varNameSplit', self.varNameSplit)
             sampX, sampY = self.prepareData(aqua_rg, 0, doLog=True)
@@ -98,7 +101,7 @@ class DataLoader:
             print(Fore.RED, 'days', folders[0], '-->', folders[-1], Style.RESET_ALL)#[fn.split('/')[-1] for fn in folders], Style.RESET_ALL)
             self.tfRecordsFiles = []
             for fn in folders:
-                self.tfRecordsFiles += glob.glob(fn+"/*" + ('_c' if self.config.convo else '_f') + ".tfrecords")
+                self.tfRecordsFiles += glob.glob(fn+"/*" + '_c' + ".tfrecords")
             self.tfRecordsFiles = sorted(self.tfRecordsFiles)
             print("tfRecordsFiles", len(self.tfRecordsFiles))
 
@@ -115,10 +118,22 @@ class DataLoader:
         """Make sure SPDQ and SPDT have comparable units"""
         if varname == "SPDQ" or varname == "PHQ":
             return arr*2.5e6/1000.
+        return arr 
+    
+    # normalize data based on mean and std.nc files
+    def normalizeInoutputs(self, varname, arr):
+        meandata= np.array(self.mean_data.variables[varname])
+        stddata = np.array(self.std_data.variables[varname])
+        arr     = (arr - meandata)/stddata
+#        test    = np.sum(np.where(mean>50000))
+#        test2   = np.sum(np.where(mean>50000))
+#        if(test+test2>0):
+#            print("problem")
         return arr
- 
+    
     def accessTimeData(self, fileReader, names, iTim, doLog=False):
         inputs = []
+        
         for k in names:
             #if k =='dTdt_nonSP':
             #    # tendency due to everything but convection
@@ -129,7 +144,6 @@ class DataLoader:
             #else:
             if self.varDim[k] == 4: 
                 arr = fileReader[k][iTim]
-                arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
             elif self.varDim[k] == 3:
                 arr = fileReader[k][iTim][None]
             elif self.varDim[k] == 2:
@@ -139,21 +153,38 @@ class DataLoader:
                 arr = fileReader[k]
                 arr = np.swapaxes(np.tile(arr, (1,self.n_lon,1)),1,2)# repeat lat to trasnform into matrix
                 arr = arr.astype('float32') # impose float 32 like other varaiables
-            if self.config.convert_units:
-                arr = self.convertUnits(k, arr)
-            #print(k, arr.shape)
-            if self.config.convo:
+            # noamlize data firs, better for convergences
+            if self.config.normalizeInoutputs:
+                arr = self.normalizeInoutputs(k, arr)
+            else: # does not allow double nmormalizations
+                if self.config.convert_units:
+                    arr = self.convertUnits(k, arr)
+            if self.varDim[k] == 4: # only keep n top pressure levels        
+                arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
+            if True:#:
                 if arr.shape[0] == 1:
                     arr = np.tile(arr, (self.n_lev,1,1))
             if doLog: 
                 print('accessTimeData', k, arr.shape)
             inputs += [arr]
-        if self.config.convo:
+        if True:#:
             inX = np.stack(inputs, axis=0)
         else: # make a soup of numbers
             inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
         if doLog: 
             print('accessTimeData ', names, inX.shape)
+        return inX
+
+        if doLog: 
+            for k in names:
+                print('accessTimeData', k, arr.shape)
+        if True:#:
+            inX = np.stack(inputs, axis=0)
+        else: # make a soup of numbers
+            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
+        if doLog: 
+            print('accessTimeData ', names, inX.shape)
+        
         return inX
 
     def prepareData(self, fileReader, iTim, doLog=False):
@@ -164,7 +195,7 @@ class DataLoader:
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
 
     def recordFileName(self, filename):
-        return filename + ('_c' if self.config.convo else '_f') + '.tfrecords' # address to save the TFRecords file into
+        return filename + ('_c' if True else '_f') + '.tfrecords' # address to save the TFRecords file into
 
     def makeTfRecordsDate(self, date):
         def _bytes_feature(value):
@@ -260,6 +291,8 @@ class DataLoader:
             Y = tf.transpose(tf.reshape(Y, self.Yshape[:2]+[-1]), [2,0,1])
             X = tf.expand_dims(X, -1)
             Y = tf.expand_dims(Y, -1)
+            X = X[:,:,-self.n_lev:,:][:,:,::-1]
+            Y = Y[:,:,-self.n_lev:,:][:,:,::-1]
             # Shuffle the examples and collect them into batch_size batches.
             # (Internally uses a RandomShuffleQueue.)
             # We run this in two threads to avoid being a bottleneck.
