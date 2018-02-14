@@ -3,9 +3,10 @@ from __future__ import print_function
 import tensorflow as tf
 import keras.backend as K
 
-
 def makeLossesPerLevel(y, pred, names, lossfct):
     print('makeLossesPerLevel')
+    y = y[:,:,2:3]
+    pred = pred[:,:,2:3]
     print('y:', y)
     print('pred:', pred)
     numChanOut = y.get_shape().as_list()[1]
