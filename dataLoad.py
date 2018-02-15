@@ -135,13 +135,8 @@ class DataLoader:
         inputs = []
         
         for k in names:
-            #if k =='dTdt_nonSP':
-            #    # tendency due to everything but convection
-            #    arr = fileReader['TPHYSTND'][iTim]  - fileReader['SPDT'][iTim] 
-            #elif k=='dQdt_nonSP':
-            #    # tendency due to everything but convection
-            #    arr = fileReader['PHQ'][iTim]  - fileReader['SPDQ'][iTim] 
-            #else:
+            if doLog: 
+                print('accessTimeData', 'varDim[k]=', self.varDim[k], 'fileReader[k]=', kfileReader[k].shape)
             if self.varDim[k] == 4: 
                 arr = fileReader[k][iTim]
             elif self.varDim[k] == 3:
@@ -153,6 +148,8 @@ class DataLoader:
                 arr = fileReader[k]
                 arr = np.swapaxes(np.tile(arr, (1,self.n_lon,1)),1,2)# repeat lat to trasnform into matrix
                 arr = arr.astype('float32') # impose float 32 like other varaiables
+            if doLog: 
+                print(k, '----> arr=', arr.shape)
             # noamlize data firs, better for convergences
             if self.config.normalizeInoutputs:
                 arr = self.normalizeInoutputs(k, arr)
@@ -161,31 +158,20 @@ class DataLoader:
                     arr = self.convertUnits(k, arr)
             if self.varDim[k] == 4: # only keep n top pressure levels        
                 arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
-            if True:#:
-                if arr.shape[0] == 1:
-                    arr = np.tile(arr, (self.n_lev,1,1))
             if doLog: 
-                print('accessTimeData', k, arr.shape)
+                print(k, '--------> arr=', arr.shape)
+
+            if arr.shape[0] == 1:
+                arr = np.tile(arr, (self.n_lev,1,1))
+            if doLog: 
+                print(k, '------------> arr=', arr.shape)
             inputs += [arr]
-        if True:#:
-            inX = np.stack(inputs, axis=0)
-        else: # make a soup of numbers
-            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
+
+        inX = np.stack(inputs, axis=0)
         if doLog: 
             print('accessTimeData ', names, inX.shape)
         return inX
 
-        if doLog: 
-            for k in names:
-                print('accessTimeData', k, arr.shape)
-        if True:#:
-            inX = np.stack(inputs, axis=0)
-        else: # make a soup of numbers
-            inX = np.stack([np.concatenate(inputs, axis=0)], axis=1)
-        if doLog: 
-            print('accessTimeData ', names, inX.shape)
-        
-        return inX
 
     def prepareData(self, fileReader, iTim, doLog=False):
         samp = self.accessTimeData(fileReader, self.varAllList, iTim, doLog)
@@ -195,7 +181,7 @@ class DataLoader:
         return self.get_record_inputs(self.config.is_train, self.config.batch_size, self.config.epoch)
 
     def recordFileName(self, filename):
-        return filename + ('_c' if True else '_f') + '.tfrecords' # address to save the TFRecords file into
+        return filename + '_c' + '.tfrecords' # address to save the TFRecords file into
 
     def makeTfRecordsDate(self, date):
         def _bytes_feature(value):
