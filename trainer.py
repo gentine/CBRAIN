@@ -48,6 +48,8 @@ class Trainer(object):
         self.start_step = 0
 
         K.set_learning_phase(config.is_train)
+        K.set_image_data_format("channels_first")
+        K.set_image_dim_ordering("th")
         with tf.device("/gpu:0" if self.use_gpu else "/cpu:0"):
             if self.config.convo:
                 self.model = self.build_model_convo()
