@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from PIL import Image
 from datetime import datetime
-import config
+from config import parser
 
 from folderDefs import *
 
@@ -77,7 +77,7 @@ def load_config(configOrConfigDir, subset=None):
     try:
         param_path = os.path.join(configOrConfigDir.model_dir, "params.json")
     except:
-        config = configargparse.ArgParser()
+        config, unparsed = parser.parse_known_args()
         param_path = configOrConfigDir
 
     print("[read] MODEL dir: %s" % config.model_dir)
