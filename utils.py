@@ -72,8 +72,12 @@ def save_config(config):
     with open(param_path, 'w') as fp:
         json.dump(config.__dict__, fp, indent=4, sort_keys=True)
 
-def load_config(config, subset):
-    param_path = os.path.join(config.model_dir, "params.json")
+def load_config(configOrConfigDir, subset=None):
+    try:
+        param_path = os.path.join(configOrConfigDir.model_dir, "params.json")
+    except:
+        config = configargparse.ArgParser()
+        param_path = configOrConfigDir
 
     print("[read] MODEL dir: %s" % config.model_dir)
     print("[read] PARAM path: %s" % param_path)
