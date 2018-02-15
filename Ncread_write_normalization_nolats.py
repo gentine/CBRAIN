@@ -22,7 +22,7 @@ from os import walk
 #                  help="write report to FILE", metavar="FILE")
 #(options, args) = parser.parse_args()
 
-print("Reading Netcdf for Normalization")
+print("Reading Netcdf for Normalization No Latudinal dependence")
 mypath = '../SP-CAM/Pritchard_Aquaplanet'
 f = []
 for (dirpath, dirnames, filenames) in walk(mypath):
@@ -55,57 +55,57 @@ for f in filenames:
             QAP      = fh.variables['QAP'][:]
             nlevels  = QAP.shape[1] 
             #QAP      = QAP.reshape(nlevels,ntimes*nlats*nlons)
-            mean_QAP = np.mean(QAP, axis=(0,3),keepdims=True)
-            std_QAP  = np.std(QAP, axis=(0,3),keepdims=True)
+            mean_QAP = np.mean(QAP, axis=(0,2,3),keepdims=True)
+            std_QAP  = np.std(QAP, axis=(0,2,3),keepdims=True)
             del QAP
             TAP      = fh.variables['TAP'][:]
-            mean_TAP = np.mean(TAP, axis=(0,3),keepdims=True)
-            std_TAP  = np.std(TAP, axis=(0,3),keepdims=True)
+            mean_TAP = np.mean(TAP, axis=(0,2,3),keepdims=True)
+            std_TAP  = np.std(TAP, axis=(0,2,3),keepdims=True)
             del TAP
             QBP      = fh.variables['QBP'][:]
-            mean_QBP = np.mean(QBP, axis=(0,3),keepdims=True)
-            std_QBP  = np.std(QBP, axis=(0,3),keepdims=True)
+            mean_QBP = np.mean(QBP, axis=(0,2,3),keepdims=True)
+            std_QBP  = np.std(QBP, axis=(0,2,3),keepdims=True)
             del QBP
             TBP      = fh.variables['TBP'][:]
-            mean_TBP = np.mean(TBP, axis=(0,3),keepdims=True)
-            std_TBP  = np.std(TBP, axis=(0,3),keepdims=True)
+            mean_TBP = np.mean(TBP, axis=(0,2,3),keepdims=True)
+            std_TBP  = np.std(TBP, axis=(0,2,3),keepdims=True)
             del TBP
             #OMEGA    = fh.variables['OMEGA'][:]
             #mean_OMEGA = np.mean(OMEGA, axis=1)
             #std_OMEGA = np.std(OMEGA, axis=1)
             #del OMEGA
             SHFLX    = fh.variables['SHFLX'][:]
-            mean_SHFLX = np.mean(SHFLX, axis=(0,2),keepdims=True)
-            std_SHFLX = np.std(SHFLX, axis=(0,2),keepdims=True)
+            mean_SHFLX = np.mean(SHFLX, axis=(0,1,2),keepdims=True)
+            std_SHFLX = np.std(SHFLX, axis=(0,1,2),keepdims=True)
             del SHFLX
             LHFLX    = fh.variables['LHFLX'][:]
-            mean_LHFLX = np.mean(LHFLX, axis=(0,2),keepdims=True)
-            std_LHFLX = np.std(LHFLX, axis=(0,2),keepdims=True)
+            mean_LHFLX = np.mean(LHFLX, axis=(0,1,2),keepdims=True)
+            std_LHFLX = np.std(LHFLX, axis=(0,1,2),keepdims=True)
             del LHFLX
             dTdt_adiabatic    = fh.variables['dTdt_adiabatic'][:]
-            mean_dTdt_adiabatic = np.mean(dTdt_adiabatic, axis=(0,3),keepdims=True)
-            std_dTdt_adiabatic = np.maximum(np.std(dTdt_adiabatic, axis=(0,3),keepdims=True),1e-20)
+            mean_dTdt_adiabatic = np.mean(dTdt_adiabatic, axis=(0,2,3),keepdims=True)
+            std_dTdt_adiabatic = np.maximum(np.std(dTdt_adiabatic, axis=(0,2,3),keepdims=True),1e-20)
             del dTdt_adiabatic
             dQdt_adiabatic    = fh.variables['dQdt_adiabatic'][:]
-            mean_dQdt_adiabatic = np.mean(dQdt_adiabatic, axis=(0,3),keepdims=True)
-            std_dQdt_adiabatic = np.maximum(np.std(dQdt_adiabatic, axis=(0,3),keepdims=True),1e-20)
+            mean_dQdt_adiabatic = np.mean(dQdt_adiabatic, axis=(0,2,3),keepdims=True)
+            std_dQdt_adiabatic = np.maximum(np.std(dQdt_adiabatic, axis=(0,2,3),keepdims=True),1e-20)
             del dQdt_adiabatic
              
             SPDT    = fh.variables['SPDT'][:]
-            mean_SPDT = np.mean(SPDT, axis=(0,3),keepdims=True)
-            std_SPDT = np.maximum(np.std(SPDT, axis=(0,3),keepdims=True),1e-20)
+            mean_SPDT = np.mean(SPDT, axis=(0,2,3),keepdims=True)
+            std_SPDT = np.maximum(np.std(SPDT, axis=(0,2,3),keepdims=True),1e-20)
             del SPDT
             SPDQ    = fh.variables['SPDQ'][:]
-            mean_SPDQ = np.mean(SPDQ, axis=(0,3),keepdims=True)
-            std_SPDQ = np.maximum(np.std(SPDQ, axis=(0,3),keepdims=True),1e-20)
+            mean_SPDQ = np.mean(SPDQ, axis=(0,2,3),keepdims=True)
+            std_SPDQ = np.maximum(np.std(SPDQ, axis=(0,2,3),keepdims=True),1e-20)
             del SPDQ
             TPHYSTND_NORAD    = fh.variables['TPHYSTND_NORAD'][:]
-            mean_TPHYSTND_NORAD = np.mean(TPHYSTND_NORAD, axis=(0,3),keepdims=True)
-            std_TPHYSTND_NORAD = np.maximum(np.std(TPHYSTND_NORAD, axis=(0,3),keepdims=True),1e-20)
+            mean_TPHYSTND_NORAD = np.mean(TPHYSTND_NORAD, axis=(0,2,3),keepdims=True)
+            std_TPHYSTND_NORAD = np.maximum(np.std(TPHYSTND_NORAD, axis=(0,2,3),keepdims=True),1e-20)
             del TPHYSTND_NORAD
             PHQ    = fh.variables['PHQ'][:]
-            mean_PHQ = np.mean(PHQ, axis=(0,3),keepdims=True)
-            std_PHQ = np.maximum(np.std(PHQ, axis=(0,3),keepdims=True),1e-20)
+            mean_PHQ = np.mean(PHQ, axis=(0,2,3),keepdims=True)
+            std_PHQ = np.maximum(np.std(PHQ, axis=(0,2,3),keepdims=True),1e-20)
             del PHQ
             
             
@@ -131,57 +131,57 @@ for f in filenames:
             QAP      = fh.variables['QAP'][:]
             nlevels  = QAP.shape[1] 
             #QAP      = QAP.reshape(nlevels,ntimes*nlats*nlons)
-            mean_QAP += np.mean(QAP, axis=(0,3),keepdims=True)
-            std_QAP  += np.std(QAP, axis=(0,3),keepdims=True)
+            mean_QAP += np.mean(QAP, axis=(0,2,3),keepdims=True)
+            std_QAP  += np.std(QAP, axis=(0,2,3),keepdims=True)
             del QAP
             TAP      = fh.variables['TAP'][:]
-            mean_TAP += np.mean(TAP, axis=(0,3),keepdims=True)
-            std_TAP  += np.std(TAP, axis=(0,3),keepdims=True)
+            mean_TAP += np.mean(TAP, axis=(0,2,3),keepdims=True)
+            std_TAP  += np.std(TAP, axis=(0,2,3),keepdims=True)
             del TAP
             QBP      = fh.variables['QBP'][:]
-            mean_QBP += np.mean(QBP, axis=(0,3),keepdims=True)
-            std_QBP  += np.std(QBP, axis=(0,3),keepdims=True)
+            mean_QBP += np.mean(QBP, axis=(0,2,3),keepdims=True)
+            std_QBP  += np.std(QBP, axis=(0,2,3),keepdims=True)
             del QBP
             TBP      = fh.variables['TBP'][:]
-            mean_TBP += np.mean(TBP, axis=(0,3),keepdims=True)
-            std_TBP  += np.std(TBP, axis=(0,3),keepdims=True)
+            mean_TBP += np.mean(TBP, axis=(0,2,3),keepdims=True)
+            std_TBP  += np.std(TBP, axis=(0,2,3),keepdims=True)
             del TBP
             #OMEGA    = fh.variables['OMEGA'][:]
             #mean_OMEGA = np.mean(OMEGA, axis=1)
             #std_OMEGA = np.std(OMEGA, axis=1)
             #del OMEGA
             SHFLX    = fh.variables['SHFLX'][:]
-            mean_SHFLX += np.mean(SHFLX, axis=(0,2),keepdims=True)
-            std_SHFLX += np.std(SHFLX, axis=(0,2),keepdims=True)
+            mean_SHFLX += np.mean(SHFLX, axis=(0,1,2),keepdims=True)
+            std_SHFLX += np.std(SHFLX, axis=(0,1,2),keepdims=True)
             del SHFLX
             LHFLX    = fh.variables['LHFLX'][:]
-            mean_LHFLX += np.mean(LHFLX, axis=(0,2),keepdims=True)
-            std_LHFLX += np.std(LHFLX, axis=(0,2),keepdims=True)
+            mean_LHFLX += np.mean(LHFLX, axis=(0,1,2),keepdims=True)
+            std_LHFLX += np.std(LHFLX, axis=(0,1,2),keepdims=True)
             del LHFLX
             dTdt_adiabatic    = fh.variables['dTdt_adiabatic'][:]
-            mean_dTdt_adiabatic += np.mean(dTdt_adiabatic, axis=(0,3),keepdims=True)
-            std_dTdt_adiabatic += np.maximum(np.std(dTdt_adiabatic, axis=(0,3),keepdims=True),1e-20)
+            mean_dTdt_adiabatic += np.mean(dTdt_adiabatic, axis=(0,2,3),keepdims=True)
+            std_dTdt_adiabatic += np.maximum(np.std(dTdt_adiabatic, axis=(0,2,3),keepdims=True),1e-20)
             del dTdt_adiabatic
             dQdt_adiabatic    = fh.variables['dQdt_adiabatic'][:]
-            mean_dQdt_adiabatic += np.mean(dQdt_adiabatic, axis=(0,3),keepdims=True)
-            std_dQdt_adiabatic += np.maximum(np.std(dQdt_adiabatic, axis=(0,3),keepdims=True),1e-20)
+            mean_dQdt_adiabatic += np.mean(dQdt_adiabatic, axis=(0,2,3),keepdims=True)
+            std_dQdt_adiabatic += np.maximum(np.std(dQdt_adiabatic, axis=(0,2,3),keepdims=True),1e-20)
             del dQdt_adiabatic
              
             SPDT    = fh.variables['SPDT'][:]
-            mean_SPDT += np.mean(SPDT, axis=(0,3),keepdims=True)
-            std_SPDT += np.maximum(np.std(SPDT, axis=(0,3),keepdims=True),1e-20)
+            mean_SPDT += np.mean(SPDT, axis=(0,2,3),keepdims=True)
+            std_SPDT += np.maximum(np.std(SPDT, axis=(0,2,3),keepdims=True),1e-20)
             del SPDT
             SPDQ    = fh.variables['SPDQ'][:]
-            mean_SPDQ += np.mean(SPDQ, axis=(0,3),keepdims=True)
-            std_SPDQ += np.maximum(np.std(SPDQ, axis=(0,3),keepdims=True),1e-20)
+            mean_SPDQ += np.mean(SPDQ, axis=(0,2,3),keepdims=True)
+            std_SPDQ += np.maximum(np.std(SPDQ, axis=(0,2,3),keepdims=True),1e-20)
             del SPDQ
             TPHYSTND_NORAD    = fh.variables['TPHYSTND_NORAD'][:]
-            mean_TPHYSTND_NORAD += np.mean(TPHYSTND_NORAD, axis=(0,3),keepdims=True)
-            std_TPHYSTND_NORAD += np.maximum(np.std(TPHYSTND_NORAD, axis=(0,3),keepdims=True),1e-20)
+            mean_TPHYSTND_NORAD += np.mean(TPHYSTND_NORAD, axis=(0,2,3),keepdims=True)
+            std_TPHYSTND_NORAD += np.maximum(np.std(TPHYSTND_NORAD, axis=(0,2,3),keepdims=True),1e-20)
             del TPHYSTND_NORAD
             PHQ    = fh.variables['PHQ'][:]
-            mean_PHQ += np.mean(PHQ, axis=(0,3),keepdims=True)
-            std_PHQ += np.maximum(np.std(PHQ, axis=(0,3),keepdims=True),1e-20)
+            mean_PHQ += np.mean(PHQ, axis=(0,2,3),keepdims=True)
+            std_PHQ += np.maximum(np.std(PHQ, axis=(0,2,3),keepdims=True),1e-20)
             del PHQ
         
         fh.close()
@@ -205,12 +205,12 @@ for f in filenames:
 #std_in  = np.append(std_in,[std_SHFLX], axis=0)
 #std_in  = np.append(std_in,[std_LHFLX], axis=0)
 try:
-    os.remove("mean.nc")
+    os.remove("mean_nolat.nc")
 except:
     pass
-dataset = Dataset("mean.nc", "w")
+dataset = Dataset("mean_nolat.nc", "w")
 level   = dataset.createDimension("level", nlevels)
-lats     = dataset.createDimension("lats", nlats)
+lats     = dataset.createDimension("lats", 1)
 lon     = dataset.createDimension("lon", 1)
 #time    = dataset.createDimension("time", 1)
 #time    = dataset.createDimension( 1)
@@ -248,12 +248,12 @@ dataset.close()
 
 
 try:
-    os.remove("std.nc")
+    os.remove("std_nolat.nc")
 except:
     pass
-dataset = Dataset("std.nc", "w")
+dataset = Dataset("std_nolat.nc", "w")
 level   = dataset.createDimension("level", nlevels)
-lats     = dataset.createDimension("lats", nlats)
+lats     = dataset.createDimension("lats", 1)
 lon     = dataset.createDimension("lon", 1)
 #time    = dataset.createDimension("time", 1)
 #time    = dataset.createDimension( 1)

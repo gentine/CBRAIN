@@ -29,7 +29,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
         rescaledError = tf.identity(error + rescaledY - pred, name='rescaledError')
         sqrLosses = tf.square(error, name='sqrLosses')
         absLosses = tf.abs(error, name='absLosses')
-        loglosses = tf.divide(tf.log(absLosses), tf.log(10.0), name='loglosses')
+        loglosses = tf.divide(tf.log(absLosses+1e-20), tf.log(10.0), name='loglosses')
 
     with tf.name_scope('PerVar'):
         for iOut in range(len(names)):
