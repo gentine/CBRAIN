@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from PIL import Image
 from datetime import datetime
-import configargparse
+import config
 
 from folderDefs import *
 
