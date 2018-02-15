@@ -151,7 +151,7 @@ class Trainer(object):
                         pass
                     np.save(filename, npar)
                     # Save keras model after training
-                    model_save_name = self.config.model_dir + '/saved_keras_model.h5'
+                    model_save_name = self.config.model_dir + '/saved_keras_model_' + str(step) + '.h5'
                     try:
                         os.makedirs(os.path.dirname(model_save_name))
                     except:
