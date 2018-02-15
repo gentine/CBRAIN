@@ -136,7 +136,7 @@ class DataLoader:
         
         for k in names:
             if doLog: 
-                print('accessTimeData', 'varDim[k]=', self.varDim[k], 'fileReader[k]=', kfileReader[k].shape)
+                print('accessTimeData', k, 'varDim[k]=', self.varDim[k], 'fileReader[k]=', fileReader[k].shape)
             if self.varDim[k] == 4: 
                 arr = fileReader[k][iTim]
             elif self.varDim[k] == 3:
