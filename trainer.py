@@ -143,14 +143,15 @@ class Trainer(object):
                         format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), losses['R2'], -losses['corr'], 0, self.lr.eval(session=self.sess)))
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
-                if step % self.config.save_step == 0:
-                    filename = self.model_dir+'/saveNet/'+op.name
-                    try:
-                        os.makedirs(os.path.dirname(filename))
-                    except:
-                        pass
-                    npar = self.sess.run(op)
-                    np.save(filename, npar)
+                if step % self.config.save_step == 0: # saving model less frequently
+                    for op in tf.global_variables():
+                        npar = self.sess.run(op)
+                        filename = self.model_dir+'/saveNet/'+op.name
+                        try:
+                            os.makedirs(os.path.dirname(filename))
+                        except:
+                            pass
+                        np.save(filename, npar)
                     # Save keras model after training
                     model_save_name = self.config.model_dir + '/saved_keras_model_' + str(step) + '.h5'
                     try:
