@@ -33,9 +33,13 @@ class DataLoader:
         self.varNameSplit = -len(self.outputNames)
         self.rawFileBase = rawFileBase
         if self.config.normalizeInoutputs:
-            self.mean_data = h5py.File(mean_file, 'r') 
-            self.std_data  = h5py.File(std_file,  'r') 
-        self.reload()
+            print(mean_file)
+            self.mean_data = nc.Dataset(mean_file, mode='r') 
+            #self.mean_data = h5py.File(mean_file, 'r')  # needed in UNIX as header is not correctly read
+            print(std_file)
+            self.std_data = nc.Dataset(std_file, mode='r') 
+            #self.std_data = h5py.File(std_file, 'r') 
+        self.reload() 
 
     def reload(self):
         raw_data_train_path = trainingDataDirRaw+'*.nc'
@@ -136,7 +140,7 @@ class DataLoader:
         
         for k in names:
             if doLog: 
-                print('accessTimeData', k, 'varDim[k]=', self.varDim[k], 'fileReader[k]=', fileReader[k].shape)
+                print('accessTimeData', 'varDim[k]=', self.varDim[k], 'fileReader[k]=', fileReader[k].shape)
             if self.varDim[k] == 4: 
                 arr = fileReader[k][iTim]
             elif self.varDim[k] == 3:
