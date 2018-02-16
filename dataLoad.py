@@ -160,7 +160,6 @@ class DataLoader:
                 arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
             if doLog: 
                 print(k, '--------> arr=', arr.shape)
-
             if arr.shape[0] == 1:
                 arr = np.tile(arr, (self.n_lev,1,1))
             if doLog: 
