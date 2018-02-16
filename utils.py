@@ -86,8 +86,8 @@ def load_config(configOrConfigDir, subset=None):
     with open(param_path, 'r') as fp:
         json_dict = json.load(fp)
     for k,v in json_dict.items():
-        if subset is None or k in subset:
-            setattr(config, k, v)
+        #if subset is None or k in subset:
+        setattr(config, k, v)
     return config
 
 def rank(array):
