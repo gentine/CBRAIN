@@ -79,7 +79,7 @@ def load_config(configOrConfigDir, subset=None):
         print("[read] MODEL dir: %s" % config.model_dir)
     except:
         config, unparsed = parser.parse_known_args()
-        param_path = configOrConfigDir
+        param_path = os.path.join(configOrConfigDir, "params.json")
 
     print("[read] PARAM path: %s" % param_path)
 
