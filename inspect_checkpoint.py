@@ -19,6 +19,8 @@ from __future__ import print_function
 
 import argparse
 import sys
+import os
+
 
 import numpy as np
 
@@ -48,15 +50,19 @@ def print_tensors_in_checkpoint_file(file_name, tensor_name, all_tensors):
       for key in sorted(var_to_shape_map):
         print("tensor_name: ", key)
         print(reader.get_tensor(key))
-        #tensor_name_out = key.replace('/','_') # added Pierre to save matrices into a file
+        #tensor_name_out = tensor_name.replace('/','_') # added Pierre to save matrices into a file
         #np.savetxt( tensor_name_out, reader.get_tensor(tensor_name), delimiter=' ', newline=' ] ; ... \n [ ', fmt='%1.8e') 
     elif not tensor_name:
       print(reader.debug_string().decode("utf-8"))
     else:
-      print("tensor_name: ", tensor_name)
-      print(reader.get_tensor(tensor_name)) 
-      tensor_name_out = tensor_name.replace('/','_') # added Pierre to save matrices into a file
-      np.savetxt( tensor_name_out, reader.get_tensor(tensor_name), delimiter=' ', newline=' ] ; ... \n [ ', fmt='%1.8e') 
+      tensor_name_list = tensor_name.split(',')
+      print(tensor_name_list)
+      for t_name in tensor_name_list:
+        print("tensor_name: ", t_name)
+        print(reader.get_tensor(t_name)) 
+        tensor_name_out = os.path.dirname(file_name)+'/'+t_name.replace('/','_')
+        #print(tensor_name_out) # added Pierre to save matrices into a file
+        np.savetxt(tensor_name_out, reader.get_tensor(t_name), delimiter=' ', newline='\n', fmt='%1.8e') 
   except Exception as e:  # pylint: disable=broad-except
     print(str(e))
     if "corrupted compressed block contents" in str(e):
