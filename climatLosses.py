@@ -71,7 +71,7 @@ def makeLossesPerVar(y, pred, names, lossfct):
         lossDict['R2'] = tf.identity(1.- tf.divide(tf.reduce_sum(sqrLosses), tf.reduce_sum(tf.square(y - batchAvgY))), name="R2")
         lossDict['corr'] = -tf.reduce_mean(tf.reduce_sum(tf.multiply(y-batchAvgY, pred-batchAvgPred))/tf.sqrt(tf.reduce_sum(tf.multiply(y-batchAvgY, y-batchAvgY))*tf.reduce_sum(tf.multiply(pred-batchAvgPred, pred-batchAvgPred))), name="corr")
         lossDict['mape'] = tf.reduce_mean(losses.mean_absolute_percentage_error(y, pred), name="mape")
-        
+        lossDict['meanPred'] = tf.reduce_mean(batchAvgPred, name='meanPred')
         # choose cost function
         lossDict['loss'] = lossDict[lossfct]
         if lossfct=="R2":
