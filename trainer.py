@@ -13,6 +13,8 @@ import tensorflow.contrib.keras as keras
 from keras.layers import ELU
 from keras.models import load_model
 from keras.backend import get_session
+
+
 #from keras.backend import manual_variable_initialization 
 
 #manual_variable_initialization(True) # do this otherwise while interfacing tensorflow with Keras weights get reinitialized automatically
@@ -53,8 +55,7 @@ class Trainer(object):
 
         self.start_step = 0
         
-        #keras.backend.get_session().run(tf.global_variables_initializer())
-        
+        #K.manual_variable_initialization(True) # to avoid reruning iniatiizer in Keras -> generates a bug
         K.set_learning_phase(config.is_train)
         # another way to flatten out the results
         K.set_image_data_format("channels_first")
@@ -112,7 +113,10 @@ class Trainer(object):
                                     gpu_options=gpu_options)
 
         self.sess = sv.prepare_or_wait_for_session(config=sess_config)
+        K.set_session(self.sess)
         # there is a bug when saving Keras model
+        #self.sess.run(tf.global_variables_initializer())
+        #keras.backend.get_session().run(tf.global_variables_initializer())
         
         # start our custom queue runner's threads
         self.coord = tf.train.Coordinator()
@@ -145,8 +149,7 @@ class Trainer(object):
                         "losses": self.losses,
                     })
                 result = self.sess.run(fetch_dict)
-                #print('x',np.mean(result['x'], axis=0))
-                #print('y',np.mean(result['y'], axis=0))
+
                 
                 if step % self.config.log_step == 0:
                     self.summary_writer.add_summary(result['summary'], totStep)
@@ -155,10 +158,18 @@ class Trainer(object):
                     losses = result['losses']
                     trainBar.set_description("epoch:{:03d}, L:{:.4f}, logL:{:+.3f}, RMSE:{:+.3f}, log10_RMSE:{:+.3f}, R2:{:+.3f}, corr:{:+.3f}, meanPred:{:+.3f}, q:{:d}, lr:{:.4g}". \
                         format(ep, losses['loss'], losses['logloss'], losses['RMSE'], np.log(losses['RMSE'])/np.log(10.), losses['R2'], -losses['corr'],losses['meanPred'], 0, self.lr.eval(session=self.sess)))
-                    for op in tf.global_variables():
+                    for op in tf.global_variables():# print all variables i.e. weights and biases
                         npar = self.sess.run(op)
                     #print(self.model.get_weights())
                 if step % self.config.save_step == 0: # saving model less frequently
+                    
+                    #print('x',np.mean(result['x'], axis=0))
+                    #print('y',np.mean(result['y'], axis=0))
+                    np.save('x', result['x']) 
+                    np.save('y', result['y']) 
+                    pred = self.model.predict(x)
+                    np.save('pred', pred) 
+                    
                     # save model as npy arrays
                     for op in tf.global_variables():
                         npar = self.sess.run(op)
@@ -180,13 +191,14 @@ class Trainer(object):
                     except:
                         pass
                     print('Saving model as', model_save_name)
+
+                    weights, biases = self.model.layers[2].get_weights() # just a check
+                    print(weights)
+                    print(biases)
+                    #print(self.sess.run(self.model.trainable_weights[0])) # p1
                     self.model.save(model_save_name)
-                    #K.get_session()
-                    #K.set_session(K.get_session())
-                    model_save_name = self.config.model_dir + '/saved_keras_model_' + str(step) + '_tf.h5'
-                    tf.contrib.keras.models.save_model(self.model,model_save_name)
-                    #tf.keras.models.save_model(self.model,model_save_name)
-                    
+                    #weights, biases = self.model.layers[2].get_weights()
+
                 visuarrs = result['visuarrs']#self.sess.run(self.visuarrs)
                 frameWorld = result['frameWorld']#self.sess.run(self.visuarrs)
 #                try:
