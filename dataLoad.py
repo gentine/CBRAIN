@@ -154,12 +154,12 @@ class DataLoader:
                 arr = arr.astype('float32') # impose float 32 like other varaiables
             if doLog: 
                 print(k, '----> arr=', arr.shape)
-            # noamlize data firs, better for convergences
-            if self.config.normalizeInoutputs:
+            # noamlize data first, better for convergences
+            if self.config.convert_units:
+                arr = self.convertUnits(k, arr)
+            elif self.config.normalizeInoutputs:# does not allow double nmormalizations
                 arr = self.normalizeInoutputs(k, arr)
-            else: # does not allow double nmormalizations
-                if self.config.convert_units:
-                    arr = self.convertUnits(k, arr)
+                
             if self.varDim[k] == 4: # only keep n top pressure levels        
                 arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels
             if doLog: 

@@ -165,10 +165,10 @@ class Trainer(object):
                     
                     #print('x',np.mean(result['x'], axis=0))
                     #print('y',np.mean(result['y'], axis=0))
-                    np.save('x', result['x']) 
-                    np.save('y', result['y']) 
-                    pred = self.model.predict(x)
-                    np.save('pred', pred) 
+                    #np.save('x', result['x'])
+                    #np.save('y', result['y'])
+                    #pred = self.model.predict(result['x'])
+                    #np.save('pred', pred) 
                     
                     # save model as npy arrays
                     for op in tf.global_variables():
@@ -192,9 +192,9 @@ class Trainer(object):
                         pass
                     print('Saving model as', model_save_name)
 
-                    weights, biases = self.model.layers[2].get_weights() # just a check
-                    print(weights)
-                    print(biases)
+#                    weights, biases = self.model.layers[2].get_weights() # just a check
+#                    print(weights)
+#                    print(biases)
                     #print(self.sess.run(self.model.trainable_weights[0])) # p1
                     self.model.save(model_save_name)
                     #weights, biases = self.model.layers[2].get_weights()
