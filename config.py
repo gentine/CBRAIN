@@ -32,6 +32,7 @@ data_arg.add_argument('--localConvo', type=str2bool, default=False)
 data_arg.add_argument('--filter_size', type=int, default=3)
 data_arg.add_argument('--input_names', type=str, default="TBP,QBP,PS,lat,SOLIN,SHFLX,LHFLX,dTdt_adiabatic,dQdt_adiabatic", help='names of input variables')
 data_arg.add_argument('--normalizeInoutputs', type=str2bool, default=True, help='noarmalize data using mean and std nc files')
+data_arg.add_argument('--donotnormalizeOutputs', type=str2bool, default=True, help='noarmalize data using mean and std nc files')
 data_arg.add_argument('--convert_units', type=str2bool, default=False, help='flag to convert SPDQ and Q tendencies into T tendencies')
 data_arg.add_argument('--nlevs_imposed', type=int, default=0, help='only use 1 to nlevs_imposed (for instance not stratosphere)')
 

@@ -34,7 +34,8 @@ def main(config):
             # automatically reloads the correct arguments for the network
             config = load_config(config, ['batch_size', 'input_names', 'output_names', 'hidden', 
                                           'keep_dropout_rate', 'act', 'addon', 'convo', 'localConvo', 
-                                          'frac_train', 'randomize', 'random_seed', 'convert_units','lossfct'])
+                                          'frac_train', 'randomize', 'random_seed', 'convert_units',
+                                          'normalizeInoutputs','lossfct'])
             print(Fore.RED, 'config\n', config)
             print(Style.RESET_ALL)
         #setattr(config, 'batch_size', 1c024)

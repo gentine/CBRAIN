@@ -185,7 +185,8 @@ class Trainer(object):
                     with open(model_save_name, "w") as json_file:
                         json_file.write(model_json)
                     # Save keras model after training
-                    model_save_name = self.config.model_dir + '/saved_keras_model_' + str(step) + '.h5'
+                    #model_save_name = self.config.model_dir + '/saved_keras_model_' + str(step) + '.h5'
+                    model_save_name = self.config.model_dir + '/saved_keras_model' + '.h5'
                     try:
                         os.makedirs(os.path.dirname(model_save_name))
                     except:
