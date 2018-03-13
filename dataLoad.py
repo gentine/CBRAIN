@@ -34,11 +34,16 @@ class DataLoader:
         self.rawFileBase = rawFileBase
         if self.config.normalizeInoutputs:
             print(mean_file)
-            #self.mean_data = nc.Dataset(mean_file, mode='r') 
-            self.mean_data = h5py.File(mean_file, 'r')  # needed in UNIX as header is not correctly read
+            try:
+                self.mean_data = h5py.File(mean_file, 'r')  # needed in UNIX/PYTHON NOTEBOOK as header is not correctly read -> needed for python notebook
+            except:
+                self.mean_data = nc.Dataset(mean_file, mode='r')
             print(std_file)
-            #self.std_data = nc.Dataset(std_file, mode='r') 
-            self.std_data = h5py.File(std_file, 'r') 
+
+            try:
+                self.std_data = h5py.File(std_file, 'r') 
+            except:
+                self.std_data = nc.Dataset(std_file, mode='r')
         self.reload() 
 
     def reload(self):
@@ -161,7 +166,7 @@ class DataLoader:
                 if self.config.donotnormalizeOutputs and (k=='SPDT' or  k=='SPDQ' or  k=='PHQ' or  k=='TPHYSTND_NORAD'):
                     arr = self.convertUnits(k, arr) # convert into Temperature  humidity
                 else:
-                    arr = self.normalizeInoutputs(k, arr)
+                    arr = self.normalizeInoutputs(k, arr) # normlize outputs
 
             if self.varDim[k] == 4: # only keep n top pressure levels        
                 arr = arr[(arr.shape[0]-self.n_lev):(arr.shape[0]),:,:] # select just n levels

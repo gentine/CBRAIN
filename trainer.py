@@ -181,7 +181,8 @@ class Trainer(object):
                         np.save(filename, npar)
                     # save model as json
                     model_json = self.model.to_json()
-                    model_save_name = self.config.model_dir + '/saved_keras_model_' + str(step) + '.json'
+                    #model_save_name = self.config.model_dir + '/saved_keras_model_' + str(step) + '.json'
+                    model_save_name = self.config.model_dir + '/saved_keras_model_' + '.json'
                     with open(model_save_name, "w") as json_file:
                         json_file.write(model_json)
                     # Save keras model after training
